@@ -1,0 +1,37 @@
+## FlipFlapp Android — local config (équivalent de .env)
+#
+# Copier vers local.properties à la racine du projet Android :
+#   cp local.properties.example local.properties
+#
+# Ce fichier n’est PAS versionné (.gitignore). Android Studio y ajoute
+# aussi sdk.dir=… au premier sync — ne pas le supprimer.
+#
+# Les valeurs ci-dessous sont lues par app/build.gradle.kts et injectées
+# dans BuildConfig / manifestPlaceholders.
+
+# Chemin SDK (rempli automatiquement par Android Studio)
+sdk.dir=/Users/YOU/Library/Android/sdk
+
+# --- FlipFlapp ---
+
+# URL de l’API Rails pour les builds debug.
+# Priorité : -Pflipflapp.apiBaseUrl=…  >  cette clé  >  défaut http://10.0.2.2:3000
+#
+# Émulateur (localhost de la machine hôte) :
+#   flipflapp.apiBaseUrl=http://10.0.2.2:3000
+# Appareil physique sur le même Wi‑Fi (IP LAN de ta machine) :
+#   flipflapp.apiBaseUrl=http://192.168.1.20:3000
+#
+flipflapp.apiBaseUrl=http://10.0.2.2:3000
+
+# Release : l’URL est figée dans build.gradle.kts → https://flipflapp.fr
+# (pas besoin de variable locale pour la prod).
+
+# Clé Google Maps / Places (Places Autocomplete pour la création d’événement).
+# Même clé que GOOGLE_MAPS_KEY côté Rails. Restreindre par package + SHA-1 en prod.
+# Injectée dans BuildConfig.GOOGLE_MAPS_API_KEY et le meta-data Manifest.
+googleMaps.apiKey=your_google_maps_key
+
+# Push (FCM) — télécharge google-services.json depuis Firebase Console
+# et place-le dans app/google-services.json (gitignored).
+# Sans ce fichier, le plugin Google Services est désactivé et PUSH_ENABLED=false.

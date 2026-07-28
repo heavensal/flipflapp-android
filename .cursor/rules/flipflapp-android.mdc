@@ -1,0 +1,50 @@
+---
+description: FlipFlapp Android — project hub
+alwaysApply: true
+---
+
+# FlipFlapp Android
+
+Native Kotlin/Compose client for the FlipFlapp football-event MVP. Read [docs/PROJECT.md](../../docs/PROJECT.md) for scope.
+
+## Workflow
+
+1. [docs/DOMAIN.md](../../docs/DOMAIN.md) — mobile domain interpretation
+2. [docs/API.md](../../docs/API.md) — Rails `/api/v1` contract
+3. [docs/TESTING.md](../../docs/TESTING.md) — clarify → tests → code
+4. [docs/KOTLIN_STYLEGUIDE.md](../../docs/KOTLIN_STYLEGUIDE.md) — Kotlin/Compose conventions
+5. [docs/DESIGN.md](../../docs/DESIGN.md) — Material 3 dark olive+gold / accessibility
+
+## Hard limits
+
+- Native only: Jetpack Compose, no WebView hybrid shell
+- Rails owns domain rules and authorization; client checks are UX only
+- JWT in EncryptedSharedPreferences / Keystore — never plain preferences
+- No dependency, SDK, commit, or push unless explicitly requested
+- Technical text in English; UI copy via string resources (French first)
+
+## Doc map
+
+| Topic | Doc |
+|-------|-----|
+| Product | [PROJECT.md](../../docs/PROJECT.md) |
+| Domain | [DOMAIN.md](../../docs/DOMAIN.md) |
+| JSON API | [API.md](../../docs/API.md) |
+| Architecture | [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) |
+| Style | [KOTLIN_STYLEGUIDE.md](../../docs/KOTLIN_STYLEGUIDE.md) |
+| Design | [DESIGN.md](../../docs/DESIGN.md) |
+| Security | [SECURITY.md](../../docs/SECURITY.md) |
+| Testing | [TESTING.md](../../docs/TESTING.md) |
+| Commands | [DEVELOPMENT.md](../../docs/DEVELOPMENT.md) |
+| Agent hub | [AGENTS.md](../../AGENTS.md) |
+| Playbook | [CODEX_PLAYBOOK.md](../../docs/CODEX_PLAYBOOK.md) |
+
+## Skill
+
+Feature workflow: [.cursor/skills/flipflapp-android/SKILL.md](../skills/flipflapp-android/SKILL.md)
+
+Authoritative backend (sibling checkout):
+
+- `../flipflapp-rails/docs/DOMAIN.md`
+- `../flipflapp-rails/docs/API.md`
+- `../flipflapp-rails/swagger/v1/swagger.yaml`

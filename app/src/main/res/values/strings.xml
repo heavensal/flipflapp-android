@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FlipFlapp</string>
+
+    <!-- Shared actions -->
+    <string name="action_back">Retour</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_send">Envoyer</string>
+    <string name="action_loading">Chargement…</string>
+    <string name="action_choose">Choisir</string>
+    <string name="action_ok">OK</string>
+
+    <!-- Tabs -->
+    <string name="tab_events">Matchs</string>
+    <string name="tab_friends">Amis</string>
+    <string name="tab_notifications">Notifs</string>
+    <string name="tab_profile">Profil</string>
+
+    <!-- Push -->
+    <string name="push_channel_name">Notifications FlipFlapp</string>
+    <string name="push_channel_description">Invitations, amis et mises à jour de matchs</string>
+    <string name="push_default_title">FlipFlapp</string>
+
+    <!-- Auth -->
+    <string name="auth_brand">FlipFlapp</string>
+    <string name="auth_sign_in_subtitle">Connectez-vous pour rejoindre vos matchs</string>
+    <string name="auth_register_title">Inscription</string>
+    <string name="auth_register_subtitle">Rejoignez FlipFlapp</string>
+    <string name="auth_password_title">Mot de passe</string>
+    <string name="auth_password_subtitle">Recevez un lien, puis saisissez le jeton reçu par e-mail</string>
+    <string name="auth_email">E-mail</string>
+    <string name="auth_password">Mot de passe</string>
+    <string name="auth_first_name">Prénom</string>
+    <string name="auth_last_name">Nom</string>
+    <string name="auth_password_confirmation">Confirmation</string>
+    <string name="auth_sign_in">Se connecter</string>
+    <string name="auth_signing_in">Connexion…</string>
+    <string name="auth_forgot_password">Mot de passe oublié</string>
+    <string name="auth_create_account">Créer un compte</string>
+    <string name="auth_register">S’inscrire</string>
+    <string name="auth_resend_confirmation">Renvoyer la confirmation</string>
+    <string name="auth_send_reset_link">Envoyer le lien</string>
+    <string name="auth_reset_with_token_title">J’ai reçu un jeton</string>
+    <string name="auth_reset_with_token_subtitle">Collez le jeton de l’e-mail et choisissez un nouveau mot de passe.</string>
+    <string name="auth_reset_token">Jeton de réinitialisation</string>
+    <string name="auth_reset_password">Réinitialiser le mot de passe</string>
+
+    <!-- Events -->
+    <string name="events_title">Matchs</string>
+    <string name="events_create">Créer un match</string>
+    <string name="events_empty">Aucun match visible pour le moment.</string>
+    <string name="event_private">Privé</string>
+    <string name="event_public">Public</string>
+    <string name="event_free">Gratuit</string>
+    <string name="event_team_capacity">%1$d/%2$d</string>
+    <string name="event_team_players">%1$d joueurs</string>
+    <string name="event_organized_by">Organisé par %1$s</string>
+    <string name="event_capacity">%1$d/%2$d</string>
+    <string name="event_capacity_detail">%1$d/%2$d joueurs · %3$d places restantes</string>
+    <string name="event_fill_open">Places dispo</string>
+    <string name="event_fill_tight">Presque plein</string>
+    <string name="event_fill_full">Complet</string>
+    <string name="event_details_title">Détail du match</string>
+    <string name="event_not_found">Match introuvable.</string>
+    <string name="event_organizer">Organisateur · %1$s</string>
+    <string name="event_price_capacity">%1$s € · %2$d/%3$d</string>
+    <string name="event_join">Rejoindre</string>
+    <string name="event_join_bench">Rejoindre le banc</string>
+    <string name="event_switch_team">Changer d’équipe</string>
+    <string name="event_switch_bench">Passer sur le banc</string>
+    <string name="event_your_team">Votre équipe</string>
+    <string name="event_invited_badge">Invité</string>
+    <string name="event_rename_team">Renommer</string>
+    <string name="event_no_players">Aucun joueur</string>
+    <string name="event_leave">Quitter le match</string>
+    <string name="event_invite_friends">Inviter des amis</string>
+    <string name="event_edit">Modifier</string>
+    <string name="event_delete">Supprimer le match</string>
+    <string name="event_invitations">Invitations</string>
+    <string name="event_delete_confirm_title">Supprimer ce match ?</string>
+    <string name="event_delete_confirm_body">Cette action est définitive pour tous les participants.</string>
+    <string name="event_rename_team_title">Renommer l’équipe</string>
+    <string name="event_team_name">Nom</string>
+    <string name="event_slot_team_one">Équipe A</string>
+    <string name="event_slot_team_two">Équipe B</string>
+    <string name="event_slot_bench">Banc</string>
+
+    <!-- Event editor -->
+    <string name="event_editor_new">Nouveau match</string>
+    <string name="event_editor_edit">Modifier le match</string>
+    <string name="event_editor_section_match">Match</string>
+    <string name="event_editor_section_when_where">Quand &amp; où</string>
+    <string name="event_editor_section_details">Détails</string>
+    <string name="event_field_title">Titre</string>
+    <string name="event_field_description">Description</string>
+    <string name="event_field_location">Adresse</string>
+    <string name="event_field_date">Date</string>
+    <string name="event_field_time">Heure</string>
+    <string name="event_field_start">Début</string>
+    <string name="event_field_capacity">Capacité</string>
+    <string name="event_field_price">Prix (€)</string>
+    <string name="event_field_private">Match privé</string>
+    <string name="event_field_private_hint">Visible seulement pour vos amis et les invités.</string>
+    <string name="event_address_hint">Tapez une adresse, puis choisissez une suggestion.</string>
+    <string name="event_address_selected">Adresse sélectionnée</string>
+    <string name="event_address_unavailable">Clé Google Maps manquante (googleMaps.apiKey dans local.properties).</string>
+    <string name="event_saving">Enregistrement…</string>
+
+    <!-- Invitations -->
+    <string name="invite_title">Inviter</string>
+    <string name="invite_empty">Aucun ami éligible à inviter.</string>
+    <string name="invite_send">Envoyer les invitations</string>
+    <string name="invite_sending">Envoi…</string>
+
+    <!-- Friends -->
+    <string name="friends_title">Amis</string>
+    <string name="friends_search_label">Rechercher (prénom, nom, pseudo)</string>
+    <string name="friends_search_hint">L’e-mail n’est pas searchable.</string>
+    <string name="friends_results">Résultats</string>
+    <string name="friends_add">Ajouter</string>
+    <string name="friends_empty">Aucun ami pour le moment. Lancez une recherche.</string>
+    <string name="friends_received">Reçues</string>
+    <string name="friends_sent">Envoyées</string>
+    <string name="friends_accepted">Amis</string>
+    <string name="friends_declined">Refusées</string>
+    <string name="friends_accept">Accepter</string>
+    <string name="friends_decline">Refuser</string>
+    <string name="friends_cancel">Annuler</string>
+    <string name="friends_remove">Retirer</string>
+    <string name="friends_delete">Supprimer</string>
+    <string name="friends_status_pending">En attente</string>
+    <string name="friends_status_accepted">Ami</string>
+    <string name="friends_status_declined">Refusée</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_mark_all">Tout lire</string>
+    <string name="notifications_empty">Aucune notification.</string>
+    <string name="notifications_mark_read">Lu</string>
+    <string name="notifications_view">Voir</string>
+    <string name="notifications_delete">Supprimer</string>
+    <string name="notification_updated">Match mis à jour</string>
+    <string name="notification_canceled">Match annulé</string>
+    <string name="notification_reminder">Rappel de match</string>
+    <string name="notification_joined">Quelqu’un a rejoint</string>
+    <string name="notification_left">Quelqu’un a quitté</string>
+    <string name="notification_invited">Invitation reçue</string>
+    <string name="notification_friendship">Demande d’ami</string>
+    <string name="notification_unknown">Notification</string>
+    <string name="notification_unread">Non lu</string>
+    <string name="notification_read">Lu</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profil</string>
+    <string name="profile_public_title">Profil public</string>
+    <string name="profile_unavailable">Profil indisponible.</string>
+    <string name="profile_new_password">Nouveau mot de passe</string>
+    <string name="profile_sign_out">Se déconnecter</string>
+    <string name="profile_change_photo">Changer la photo</string>
+    <string name="profile_avatar_cd">Photo de profil</string>
+</resources>
