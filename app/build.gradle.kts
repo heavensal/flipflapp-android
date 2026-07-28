@@ -1,9 +1,12 @@
 import java.util.Properties
 
 plugins {
+    id("com.android.application")
+    id("com.google.gms.google-services")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    id("com.google.gms.google-services") version "4.5.0" apply false
 }
 
 val localProperties = Properties()
@@ -103,6 +106,9 @@ kotlin {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:34.16.0"))
+    implementation("com.google.firebase:firebase-messaging:25.0.2")
+    implementation("com.google.firebase:firebase-analytics")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
