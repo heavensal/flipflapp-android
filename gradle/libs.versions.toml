@@ -16,7 +16,7 @@ coroutines = "1.10.2"
 lifecycleViewmodelCompose = "2.9.4"
 places = "5.1.1"
 coil = "2.7.0"
-firebaseBom = "33.16.0"
+firebaseBom = "34.16.0"
 googleServices = "4.4.3"
 
 [libraries]
