@@ -58,6 +58,15 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 Output: `app/build/outputs/bundle/release/app-release.aab`.
 
+Release builds enable R8 (`isMinifyEnabled`) and embed native debug symbols
+(`ndk.debugSymbolLevel = SYMBOL_TABLE`). With AGP 4.1+, Play Console reads both
+from the AAB — no separate mapping / symbols upload is required.
+
+Optional local copies (kept after `bundleRelease`):
+
+- R8 mapping: `app/build/outputs/mapping/release/mapping.txt`
+- Native symbols zip (if generated separately): under `app/build/outputs/native-debug-symbols/`
+
 ## CI signed bundle
 
 1. Actions → **Release signed AAB** → Run workflow (set `versionName`, e.g. `1.0.0`), **or** push a tag `v1.0.0`.

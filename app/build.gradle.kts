@@ -107,7 +107,13 @@ android {
             isDebuggable = true
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // Embed native debug symbols in the AAB for Play Console crash/ANR symbolication
+            // (Maps / Places / Firebase ship .so libraries).
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
