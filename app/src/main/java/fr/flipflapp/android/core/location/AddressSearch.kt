@@ -49,7 +49,7 @@ class AddressSearch(context: Context) {
                     Places.initializeWithNewPlacesApiEnabled(appContext, apiKey)
                 }
                 Places.createClient(appContext)
-            } catch (error: Exception) {
+            } catch (error: Throwable) {
                 Log.e(TAG, "Places initialization failed", error)
                 null
             }

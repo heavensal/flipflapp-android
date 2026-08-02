@@ -1,19 +1,20 @@
 package fr.flipflapp.android.core.designsystem.components
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,11 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import fr.flipflapp.android.R
+import fr.flipflapp.android.core.designsystem.theme.FlipflappControlShape
+import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
 import fr.flipflapp.android.core.location.AddressPrediction
 import fr.flipflapp.android.core.location.AddressSearch
 import fr.flipflapp.android.core.location.AddressSuggestion
@@ -52,20 +56,19 @@ fun FfAddressField(
     var predictions by remember { mutableStateOf<List<AddressPrediction>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
     var resolving by remember { mutableStateOf(false) }
-    var menuExpanded by remember { mutableStateOf(false) }
     val latestQuery by rememberUpdatedState(query)
     val busy = searching || resolving
+    val spacing = FlipflappThemeTokens.spacing
+    val extras = FlipflappThemeTokens.extras
 
     LaunchedEffect(query, selectedLabel) {
         if (!enabled || !search.isAvailable) {
             predictions = emptyList()
-            menuExpanded = false
             return@LaunchedEffect
         }
         val trimmed = query.trim()
         if (trimmed.length < 3 || trimmed == selectedLabel.trim()) {
             predictions = emptyList()
-            menuExpanded = false
             return@LaunchedEffect
         }
         delay(350)
@@ -73,13 +76,15 @@ fun FfAddressField(
         searching = true
         try {
             predictions = search.suggest(trimmed)
-            menuExpanded = predictions.isNotEmpty()
         } finally {
             searching = false
         }
     }
 
-    Box(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+    ) {
         FfTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -111,47 +116,61 @@ fun FfAddressField(
                 null
             },
         )
-        DropdownMenu(
-            expanded = menuExpanded,
-            onDismissRequest = { menuExpanded = false },
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .heightIn(max = 280.dp),
-        ) {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                predictions.forEach { prediction ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
+
+        if (predictions.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = FlipflappControlShape,
+                color = extras.inputFill,
+                border = BorderStroke(1.dp, extras.border),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+            ) {
+                Column {
+                    predictions.forEachIndexed { index, prediction ->
+                        if (index > 0) {
+                            HorizontalDivider(color = extras.border.copy(alpha = 0.5f))
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !resolving) {
+                                    predictions = emptyList()
+                                    scope.launch {
+                                        resolving = true
+                                        try {
+                                            search.resolve(prediction)?.let(onAddressSelected)
+                                        } finally {
+                                            resolving = false
+                                        }
+                                    }
+                                }
+                                .padding(horizontal = spacing.md, vertical = spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Place,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = prediction.primaryText,
                                     style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 if (prediction.secondaryText.isNotBlank()) {
                                     Text(
                                         text = prediction.secondaryText,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = extras.secondaryText,
                                     )
                                 }
                             }
-                        },
-                        onClick = {
-                            menuExpanded = false
-                            predictions = emptyList()
-                            scope.launch {
-                                resolving = true
-                                try {
-                                    search.resolve(prediction)?.let(onAddressSelected)
-                                } finally {
-                                    resolving = false
-                                }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Place, contentDescription = null)
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }
