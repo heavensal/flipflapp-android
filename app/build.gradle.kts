@@ -34,6 +34,31 @@ val googleMapsApiKey =
 val googleServicesFile = file("google-services.json")
 val hasGoogleServices = googleServicesFile.exists()
 
+fun propOrLocal(name: String): String? =
+    (project.findProperty(name) as String?)
+        ?: System.getenv(name)
+        ?: localProperties.getProperty(name)
+        ?: localProperties.getProperty(name.lowercase())
+
+val releaseKeystorePath = propOrLocal("KEYSTORE_FILE")
+val releaseStorePassword = propOrLocal("KEYSTORE_PASSWORD")
+val releaseKeyAlias = propOrLocal("KEY_ALIAS")
+val releaseKeyPassword = propOrLocal("KEY_PASSWORD")
+val hasReleaseSigning =
+    !releaseKeystorePath.isNullOrBlank() &&
+        !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() &&
+        !releaseKeyPassword.isNullOrBlank()
+
+val releaseVersionCode =
+    (project.findProperty("versionCode") as String?)?.toIntOrNull()
+        ?: System.getenv("VERSION_CODE")?.toIntOrNull()
+        ?: 1
+val releaseVersionName =
+    (project.findProperty("versionName") as String?)
+        ?: System.getenv("VERSION_NAME")
+        ?: "1.0.0"
+
 android {
     namespace = "fr.flipflapp.android"
     compileSdk {
@@ -46,8 +71,8 @@ android {
         applicationId = "fr.flipflapp.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -65,6 +90,18 @@ android {
         manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                // Absolute paths (CI / home directory) or project-relative.
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isDebuggable = true
@@ -76,6 +113,9 @@ android {
                 "proguard-rules.pro",
             )
             buildConfigField("String", "API_BASE_URL", "\"https://flipflapp.fr\"")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

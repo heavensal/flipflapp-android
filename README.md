@@ -16,6 +16,7 @@ Client natif Kotlin / Jetpack Compose pour le MVP FlipFlapp. L’app consomme l�
 | Sécurité | [docs/SECURITY.md](docs/SECURITY.md) |
 | Tests | [docs/TESTING.md](docs/TESTING.md) |
 | Dev local | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
+| Release / Play Store | [docs/RELEASE.md](docs/RELEASE.md) |
 | Playbook agent | [docs/CODEX_PLAYBOOK.md](docs/CODEX_PLAYBOOK.md) |
 
 Backend (checkout voisin) :

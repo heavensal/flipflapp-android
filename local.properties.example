@@ -35,3 +35,10 @@ googleMaps.apiKey=your_google_maps_key
 # Push (FCM) — télécharge google-services.json depuis Firebase Console
 # et place-le dans app/google-services.json (gitignored).
 # Sans ce fichier, le plugin Google Services est désactivé et PUSH_ENABLED=false.
+
+# --- Release signing (optional locally; required for :app:bundleRelease) ---
+# Generate once: see docs/RELEASE.md. Never commit the keystore or passwords.
+# KEYSTORE_FILE=/Users/YOU/flipflapp-upload.p12
+# KEYSTORE_PASSWORD=...
+# KEY_ALIAS=upload
+# KEY_PASSWORD=...

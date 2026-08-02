@@ -48,6 +48,10 @@ Install on a connected emulator/device:
 3. Physical device: use the machine LAN IP and ensure debug cleartext is allowed.
 4. Production builds must use HTTPS only.
 
+## Release signing
+
+See [RELEASE.md](RELEASE.md) for upload keystore setup, GitHub Actions secrets, signed AAB builds, and Play Console first upload.
+
 ## Project hygiene
 
 - Commit shared Gradle/version catalog files; do not commit `local.properties`, keystores, or `.idea` user noise beyond team convention.
