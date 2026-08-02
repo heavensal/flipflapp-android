@@ -41,6 +41,16 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "${RUNNER_TEMP}/upload.p12"
           echo "KEYSTORE_FILE=${RUNNER_TEMP}/upload.p12" >> "$GITHUB_ENV"
 
+      - name: Write google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Missing secret GOOGLE_SERVICES_JSON" >&2
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
       - name: Resolve version
         id: version
         run: |
@@ -61,6 +71,7 @@ jobs:
           ./gradlew :app:bundleRelease \
             -PversionCode=${{ steps.version.outputs.versionCode }} \
             -PversionName=${{ steps.version.outputs.versionName }} \
+            -PgoogleMaps.apiKey=${{ secrets.GOOGLE_MAPS_KEY }} \
             --stacktrace
 
       - name: Upload AAB artifact

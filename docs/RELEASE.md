@@ -9,6 +9,9 @@
   - `ANDROID_KEYSTORE_PASSWORD`
   - `ANDROID_KEY_ALIAS`
   - `ANDROID_KEY_PASSWORD`
+  - `GOOGLE_SERVICES_JSON` (contenu de `app/google-services.json`)
+  - `GOOGLE_MAPS_KEY` (même valeur que Rails)
+  - `FCM_PROJECT_ID` / `FCM_SERVICE_ACCOUNT_JSON` (miroir Rails ; le client utilise surtout `GOOGLE_SERVICES_JSON`)
 
 Never commit `*.jks`, `*.keystore`, `*.p12`, `keystore.properties`, or passwords.
 
