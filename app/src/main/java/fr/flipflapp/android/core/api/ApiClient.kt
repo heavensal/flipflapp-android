@@ -104,6 +104,27 @@ class ApiClient(
         )
     }
 
+    suspend fun confirmUser(confirmationToken: String): AuthenticatedSession {
+        val body = encode(UserEnvelope(ConfirmationInput(confirmationToken.trim())))
+        val result = sendRaw(
+            path = "api/v1/users/confirmation",
+            method = "PATCH",
+            body = body,
+            authenticated = false,
+        )
+        validateJson(result.contentType, result.body)
+        val user = decode<CurrentUser>(result.body)
+        val authorization = result.headers["authorization"]
+            ?: result.headers["Authorization"]
+            ?: throw ApiError.IncompatibleResponse
+        if (!authorization.startsWith("Bearer ", ignoreCase = true)) {
+            throw ApiError.IncompatibleResponse
+        }
+        val token = authorization.substringAfter(' ').trim()
+        if (token.isEmpty()) throw ApiError.IncompatibleResponse
+        return AuthenticatedSession(user = user, token = token)
+    }
+
     suspend fun currentUser(): CurrentUser = send(path = "api/v1/me", method = "GET")
 
     suspend fun updateCurrentUser(input: UserUpdateInput): CurrentUser {

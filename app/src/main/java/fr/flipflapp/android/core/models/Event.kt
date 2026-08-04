@@ -47,8 +47,8 @@ data class EventInput(
     val location: String,
     @SerialName("start_time") val startTime: String,
     @SerialName("number_of_participants") val numberOfParticipants: Int,
-    val price: String,
+    val price: Double,
     @SerialName("is_private") val isPrivate: Boolean,
-    val latitude: String,
-    val longitude: String,
+    val latitude: Double,
+    val longitude: Double,
 )

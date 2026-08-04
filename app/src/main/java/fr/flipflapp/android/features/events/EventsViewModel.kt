@@ -26,12 +26,13 @@ class EventsViewModel(
 
     init { refresh() }
 
-    fun refresh(fromUser: Boolean = false) {
+    fun refresh(fromUser: Boolean = false, silent: Boolean = false) {
         viewModelScope.launch {
-            if (fromUser && _state.value is LoadState.Content) {
-                _isRefreshing.value = true
-            } else {
-                _state.value = LoadState.Loading
+            val showContent = _state.value is LoadState.Content || _state.value is LoadState.Empty
+            when {
+                fromUser && showContent -> _isRefreshing.value = true
+                silent -> Unit
+                else -> _state.value = LoadState.Loading
             }
             try {
                 val events = api.events()

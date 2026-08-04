@@ -18,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.flipflapp.android.R
+import fr.flipflapp.android.core.designsystem.EmptyStateAction
 import fr.flipflapp.android.core.designsystem.LoadStateView
+import fr.flipflapp.android.core.designsystem.RefreshWhenVisible
 import fr.flipflapp.android.core.designsystem.components.FfEventRow
 import fr.flipflapp.android.core.designsystem.components.FfFab
 import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
@@ -29,12 +31,17 @@ import fr.flipflapp.android.core.models.EventId
 @Composable
 fun EventsScreen(
     viewModel: EventsViewModel,
+    visible: Boolean,
     onOpenEvent: (EventId) -> Unit,
     onCreateEvent: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val refreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val spacing = FlipflappThemeTokens.spacing
+
+    RefreshWhenVisible(active = visible) {
+        viewModel.refresh(silent = true)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -54,7 +61,12 @@ fun EventsScreen(
         ) {
             LoadStateView(
                 state = state,
-                emptyMessage = stringResource(R.string.events_empty),
+                emptyTitle = stringResource(R.string.events_empty_title),
+                emptyMessage = stringResource(R.string.events_empty_message),
+                emptyPrimaryAction = EmptyStateAction(
+                    label = stringResource(R.string.events_create),
+                    onClick = onCreateEvent,
+                ),
                 onRetry = { viewModel.refresh() },
             ) { events ->
                 LazyColumn(

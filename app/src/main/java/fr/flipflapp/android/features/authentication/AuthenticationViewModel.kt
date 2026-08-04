@@ -22,6 +22,7 @@ data class AuthenticationUiState(
     val firstName: String = "",
     val lastName: String = "",
     val resetToken: String = "",
+    val confirmationToken: String = "",
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
@@ -41,6 +42,15 @@ class AuthenticationViewModel(
     fun updateFirstName(value: String) = _ui.update { it.copy(firstName = value, errorMessage = null) }
     fun updateLastName(value: String) = _ui.update { it.copy(lastName = value, errorMessage = null) }
     fun updateResetToken(value: String) = _ui.update { it.copy(resetToken = value, errorMessage = null) }
+    fun updateConfirmationToken(value: String) =
+        _ui.update { it.copy(confirmationToken = value, errorMessage = null) }
+
+    fun applyPrefilledConfirmationToken(token: String) {
+        val trimmed = token.trim()
+        if (trimmed.isNotEmpty()) {
+            _ui.update { it.copy(confirmationToken = trimmed, errorMessage = null, infoMessage = null) }
+        }
+    }
 
     fun signIn() {
         val state = _ui.value
@@ -151,6 +161,26 @@ class AuthenticationViewModel(
                 _ui.update { it.copy(errorMessage = error.userMessage()) }
             } catch (error: Exception) {
                 _ui.update { it.copy(errorMessage = error.message ?: "Envoi impossible.") }
+            } finally {
+                _ui.update { it.copy(isSubmitting = false) }
+            }
+        }
+    }
+
+    fun confirmAccount() {
+        val token = _ui.value.confirmationToken.trim()
+        if (token.isEmpty()) {
+            _ui.update { it.copy(errorMessage = "Le jeton de confirmation est requis.") }
+            return
+        }
+        viewModelScope.launch {
+            _ui.update { it.copy(isSubmitting = true, errorMessage = null, infoMessage = null) }
+            try {
+                session.confirmUser(token)
+            } catch (error: ApiError) {
+                _ui.update { it.copy(errorMessage = error.userMessage()) }
+            } catch (error: Exception) {
+                _ui.update { it.copy(errorMessage = error.message ?: "Confirmation impossible.") }
             } finally {
                 _ui.update { it.copy(isSubmitting = false) }
             }

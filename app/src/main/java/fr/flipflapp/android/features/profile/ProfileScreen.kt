@@ -39,6 +39,9 @@ import fr.flipflapp.android.core.designsystem.components.FfTextField
 import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
 import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
 import fr.flipflapp.android.core.models.CurrentUser
+import fr.flipflapp.android.core.designsystem.LoadState
+import fr.flipflapp.android.core.designsystem.LoadStateView
+import fr.flipflapp.android.core.designsystem.RefreshWhenVisible
 import fr.flipflapp.android.core.models.PublicUser
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +116,36 @@ fun ProfileScreen(
                     },
                     enabled = !ui.isUploadingAvatar,
                 )
+                if (user.avatarUrl != null) {
+                    FfTextButton(
+                        text = stringResource(R.string.profile_remove_photo),
+                        onClick = viewModel::removeAvatar,
+                        enabled = !ui.isUploadingAvatar && !ui.isSubmitting,
+                    )
+                }
+            }
+            user.unconfirmedEmail?.let { pendingEmail ->
+                FfSection {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        Text(
+                            text = stringResource(R.string.profile_unconfirmed_email, pendingEmail),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        FfTextField(
+                            value = ui.confirmationToken,
+                            onValueChange = { v ->
+                                viewModel.update { it.copy(confirmationToken = v) }
+                            },
+                            label = stringResource(R.string.auth_confirmation_token),
+                        )
+                        FfSecondaryButton(
+                            text = stringResource(R.string.profile_confirm_email_cta),
+                            onClick = viewModel::confirmPendingEmail,
+                            enabled = !ui.isSubmitting && ui.confirmationToken.isNotBlank(),
+                        )
+                    }
+                }
             }
             FfSection {
                 Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -185,59 +218,168 @@ fun ProfileScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
-    user: PublicUser?,
+    viewModel: UserProfileViewModel,
+    currentUserId: fr.flipflapp.android.core.models.UserId,
     onBack: (() -> Unit)? = null,
     onBackLabel: String? = null,
 ) {
     val spacing = FlipflappThemeTokens.spacing
     val title = onBackLabel ?: stringResource(R.string.profile_public_title)
+    val userState by viewModel.user.collectAsStateWithLifecycle()
+    val friendshipUi by viewModel.friendship.collectAsStateWithLifecycle()
+    val isSelf = (userState as? LoadState.Content)?.value?.id == currentUserId
+
+    RefreshWhenVisible(active = true) {
+        viewModel.refresh(silent = true)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { FfTopAppBar(title = title, onBack = onBack) },
     ) { padding ->
+        LoadStateView(
+            state = userState,
+            emptyTitle = stringResource(R.string.profile_unavailable),
+            onRetry = viewModel::refresh,
+            modifier = Modifier.padding(padding),
+        ) { user ->
+            PublicProfileContent(
+                user = user,
+                friendshipUi = friendshipUi,
+                isSelf = isSelf,
+                viewModel = viewModel,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PublicProfileContent(
+    user: PublicUser,
+    friendshipUi: PublicProfileUiState,
+    isSelf: Boolean,
+    viewModel: UserProfileViewModel,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(spacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(spacing.lg),
+    ) {
+        FfAvatar(
+            user = user,
+            size = 128.dp,
+            style = FfAvatarStyle.Ring,
+            contentDescription = stringResource(R.string.profile_avatar_cd),
+        )
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
-            if (user == null) {
+            Text(
+                user.displayName,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+                color = Color.White,
+            )
+            user.username?.let {
                 Text(
-                    stringResource(R.string.profile_unavailable),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "@$it",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = FlipflappThemeTokens.extras.secondaryText,
                 )
-            } else {
-                Column(
+            }
+        }
+        if (!isSelf) {
+            PublicProfileFriendshipActions(
+                state = friendshipUi.friendshipState,
+                isBusy = friendshipUi.isBusy,
+                onAddFriend = viewModel::sendFriendRequest,
+                onAccept = viewModel::acceptFriendRequest,
+                onDecline = viewModel::declineFriendRequest,
+                onRemove = viewModel::removeFriendship,
+            )
+        }
+        friendshipUi.message?.let {
+            Text(it, color = MaterialTheme.colorScheme.primary)
+        }
+        friendshipUi.errorMessage?.let {
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun PublicProfileFriendshipActions(
+    state: PublicProfileFriendshipState,
+    isBusy: Boolean,
+    onAddFriend: () -> Unit,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+    ) {
+        when (state) {
+            PublicProfileFriendshipState.None -> {
+                FfPrimaryButton(
+                    text = stringResource(R.string.profile_add_friend),
+                    onClick = onAddFriend,
+                    enabled = !isBusy,
+                )
+            }
+            PublicProfileFriendshipState.PendingSent -> {
+                FfSecondaryButton(
+                    text = stringResource(R.string.profile_cancel_request),
+                    onClick = onRemove,
+                    enabled = !isBusy,
+                )
+            }
+            PublicProfileFriendshipState.PendingReceived -> {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(spacing.lg),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
                 ) {
-                    FfAvatar(
-                        user = user,
-                        size = 128.dp,
-                        style = FfAvatarStyle.Ring,
-                        contentDescription = stringResource(R.string.profile_avatar_cd),
+                    FfPrimaryButton(
+                        text = stringResource(R.string.profile_accept_friend),
+                        onClick = onAccept,
+                        enabled = !isBusy,
+                        fillMaxWidth = false,
+                        modifier = Modifier.weight(1f),
                     )
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(spacing.xs),
-                    ) {
-                        Text(
-                            user.displayName,
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
-                            color = Color.White,
-                        )
-                        user.username?.let {
-                            Text(
-                                "@$it",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = FlipflappThemeTokens.extras.secondaryText,
-                            )
-                        }
-                    }
+                    FfSecondaryButton(
+                        text = stringResource(R.string.profile_decline_friend),
+                        onClick = onDecline,
+                        enabled = !isBusy,
+                        fillMaxWidth = false,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
+            }
+            PublicProfileFriendshipState.Accepted -> {
+                Text(
+                    text = stringResource(R.string.profile_friends),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                FfSecondaryButton(
+                    text = stringResource(R.string.profile_unfriend),
+                    onClick = onRemove,
+                    enabled = !isBusy,
+                )
+            }
+            PublicProfileFriendshipState.DeclinedReceived -> {
+                FfSecondaryButton(
+                    text = stringResource(R.string.profile_remove_declined),
+                    onClick = onRemove,
+                    enabled = !isBusy,
+                )
             }
         }
     }

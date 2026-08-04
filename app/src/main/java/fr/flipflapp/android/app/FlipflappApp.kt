@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,12 +39,14 @@ import fr.flipflapp.android.core.models.CurrentUser
 import fr.flipflapp.android.core.models.EventId
 import fr.flipflapp.android.core.models.UserId
 import fr.flipflapp.android.features.authentication.AuthenticationViewModel
+import fr.flipflapp.android.features.authentication.ConfirmationScreen
 import fr.flipflapp.android.features.authentication.PasswordRecoveryScreen
 import fr.flipflapp.android.features.authentication.RegistrationScreen
 import fr.flipflapp.android.features.authentication.SignInScreen
 import fr.flipflapp.android.features.eventdetails.EventDetailsScreen
 import fr.flipflapp.android.features.eventdetails.EventDetailsViewModel
 import fr.flipflapp.android.features.eventdetails.InvitationPickerScreen
+import fr.flipflapp.android.features.eventdetails.InvitationPickerViewModel
 import fr.flipflapp.android.features.eventeditor.EventEditorScreen
 import fr.flipflapp.android.features.eventeditor.EventEditorViewModel
 import fr.flipflapp.android.features.events.EventsScreen
@@ -55,11 +58,13 @@ import fr.flipflapp.android.features.notifications.NotificationsViewModel
 import fr.flipflapp.android.features.profile.ProfileScreen
 import fr.flipflapp.android.features.profile.ProfileViewModel
 import fr.flipflapp.android.features.profile.UserProfileScreen
+import fr.flipflapp.android.features.profile.UserProfileViewModel
 import fr.flipflapp.android.core.push.PushDeepLink
 
 internal object Routes {
     const val SignIn = "sign_in"
     const val Register = "register"
+    const val Confirm = "confirm"
     const val Recover = "recover"
     const val Events = "events"
     const val Friends = "friends"
@@ -109,6 +114,7 @@ fun FlipflappApp(container: AppContainer) {
             when (val current = sessionState) {
                 SessionState.Restoring -> LoadingBox()
                 SessionState.SignedOut -> SignedOutNav(
+                    container = container,
                     environment = state.environment,
                     session = state.session,
                 )
@@ -130,6 +136,7 @@ private fun LoadingBox() {
 
 @Composable
 private fun SignedOutNav(
+    container: AppContainer,
     environment: AppEnvironment,
     session: SessionStore,
 ) {
@@ -137,16 +144,32 @@ private fun SignedOutNav(
     val authViewModel: AuthenticationViewModel = viewModel(
         factory = AuthenticationViewModel.factory(session, environment.api),
     )
+    val pendingConfirmationToken by container.pendingConfirmationToken.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingConfirmationToken) {
+        val token = container.consumeConfirmationToken() ?: return@LaunchedEffect
+        authViewModel.applyPrefilledConfirmationToken(token)
+        navController.navigate(Routes.Confirm) {
+            launchSingleTop = true
+        }
+    }
     NavHost(navController = navController, startDestination = Routes.SignIn) {
         composable(Routes.SignIn) {
             SignInScreen(
                 viewModel = authViewModel,
                 onRegister = { navController.navigate(Routes.Register) },
                 onRecoverPassword = { navController.navigate(Routes.Recover) },
+                onConfirmAccount = { navController.navigate(Routes.Confirm) },
             )
         }
         composable(Routes.Register) {
             RegistrationScreen(
+                viewModel = authViewModel,
+                onBack = { navController.popBackStack() },
+                onConfirmWithToken = { navController.navigate(Routes.Confirm) },
+            )
+        }
+        composable(Routes.Confirm) {
+            ConfirmationScreen(
                 viewModel = authViewModel,
                 onBack = { navController.popBackStack() },
             )
@@ -184,10 +207,17 @@ private fun SignedInNav(
     val currentRoute = backStack?.destination?.route
     val selectedTab = selectedTabForRoute(currentRoute)
 
+    val eventsTabActive = selectedTab == Routes.Events && currentRoute == Routes.Events
+    val friendsTabActive = selectedTab == Routes.Friends && currentRoute == Routes.Friends
+    val notificationsTabActive = selectedTab == Routes.Notifications &&
+        currentRoute == Routes.Notifications
+
+    val badges = remember { AppBadgeStore() }
     val notificationsViewModel: NotificationsViewModel = viewModel(
-        factory = NotificationsViewModel.factory(environment.api, session),
+        factory = NotificationsViewModel.factory(environment.api, session, badges),
     )
     val unread by notificationsViewModel.unreadCount.collectAsStateWithLifecycle()
+    val receivedFriendRequests by badges.receivedFriendRequests.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -210,12 +240,20 @@ private fun SignedInNav(
                             }
                         },
                         icon = {
-                            if (route == Routes.Notifications) {
-                                FfBadgedIcon(count = unread) {
+                            when (route) {
+                                Routes.Notifications -> {
+                                    FfBadgedIcon(count = unread) {
+                                        Icon(icon, contentDescription = label)
+                                    }
+                                }
+                                Routes.Friends -> {
+                                    FfBadgedIcon(count = receivedFriendRequests) {
+                                        Icon(icon, contentDescription = label)
+                                    }
+                                }
+                                else -> {
                                     Icon(icon, contentDescription = label)
                                 }
-                            } else {
-                                Icon(icon, contentDescription = label)
                             }
                         },
                         label = { Text(label) },
@@ -242,16 +280,18 @@ private fun SignedInNav(
                 )
                 EventsScreen(
                     viewModel = eventsViewModel,
+                    visible = eventsTabActive,
                     onOpenEvent = { id -> navController.navigate(Routes.eventDetails(id.value)) },
                     onCreateEvent = { navController.navigate(Routes.EventCreate) },
                 )
             }
             composable(Routes.Friends) {
                 val friendsViewModel: FriendsViewModel = viewModel(
-                    factory = FriendsViewModel.factory(environment.api, session),
+                    factory = FriendsViewModel.factory(environment.api, session, badges),
                 )
                 FriendsScreen(
                     viewModel = friendsViewModel,
+                    visible = friendsTabActive,
                     currentUserId = user.id,
                     onOpenUser = { id -> navController.navigate(Routes.userProfile(id.value)) },
                 )
@@ -259,6 +299,7 @@ private fun SignedInNav(
             composable(Routes.Notifications) {
                 NotificationsScreen(
                     viewModel = notificationsViewModel,
+                    visible = notificationsTabActive,
                     onOpenEvent = { id -> navController.navigate(Routes.eventDetails(id.value)) },
                 )
             }
@@ -319,10 +360,16 @@ private fun SignedInNav(
                 arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
             ) { entry ->
                 val eventId = EventId(entry.arguments!!.getInt("eventId"))
+                val invitationViewModel: InvitationPickerViewModel = viewModel(
+                    factory = InvitationPickerViewModel.factory(
+                        eventId = eventId,
+                        currentUserId = user.id,
+                        api = environment.api,
+                        session = session,
+                    ),
+                )
                 InvitationPickerScreen(
-                    eventId = eventId,
-                    currentUserId = user.id,
-                    api = environment.api,
+                    viewModel = invitationViewModel,
                     onBack = { navController.popBackStack() },
                     onInvited = { navController.popBackStack() },
                 )
@@ -332,13 +379,17 @@ private fun SignedInNav(
                 arguments = listOf(navArgument("userId") { type = NavType.IntType }),
             ) { entry ->
                 val userId = UserId(entry.arguments!!.getInt("userId"))
-                val profileViewModel: ProfileViewModel = viewModel(
-                    factory = ProfileViewModel.factory(environment.api, session, appContext),
+                val userProfileViewModel: UserProfileViewModel = viewModel(
+                    factory = UserProfileViewModel.factory(
+                        userId = userId,
+                        currentUserId = user.id,
+                        api = environment.api,
+                        session = session,
+                    ),
                 )
-                LaunchedEffect(userId) { profileViewModel.loadPublicUser(userId) }
-                val publicUser by profileViewModel.publicUser.collectAsStateWithLifecycle()
                 UserProfileScreen(
-                    user = publicUser,
+                    viewModel = userProfileViewModel,
+                    currentUserId = user.id,
                     onBack = { navController.popBackStack() },
                 )
             }

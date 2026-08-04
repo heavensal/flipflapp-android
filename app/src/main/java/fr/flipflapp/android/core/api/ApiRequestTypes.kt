@@ -36,15 +36,21 @@ data class PasswordResetInput(
 
 @Serializable
 data class UserUpdateInput(
-    @SerialName("first_name") val firstName: String,
-    @SerialName("last_name") val lastName: String,
-    val email: String,
+    @SerialName("first_name") val firstName: String? = null,
+    @SerialName("last_name") val lastName: String? = null,
+    val email: String? = null,
     val password: String? = null,
     @SerialName("password_confirmation") val passwordConfirmation: String? = null,
+    @SerialName("remove_avatar") val removeAvatar: Boolean? = null,
 )
 
 @Serializable
 data class EmailInput(val email: String)
+
+@Serializable
+data class ConfirmationInput(
+    @SerialName("confirmation_token") val confirmationToken: String,
+)
 
 @Serializable
 data class UserEnvelope<T>(val user: T)

@@ -25,6 +25,7 @@ data class PublicUser(
 data class CurrentUser(
     val id: UserId,
     val email: String,
+    @SerialName("unconfirmed_email") val unconfirmedEmail: String? = null,
     @SerialName("first_name") val firstName: String? = null,
     @SerialName("last_name") val lastName: String? = null,
     val username: String? = null,

@@ -30,6 +30,9 @@ class AppContainer(
     private val _pendingPushPath = MutableStateFlow<String?>(null)
     val pendingPushPath: StateFlow<String?> = _pendingPushPath.asStateFlow()
 
+    private val _pendingConfirmationToken = MutableStateFlow<String?>(null)
+    val pendingConfirmationToken: StateFlow<String?> = _pendingConfirmationToken.asStateFlow()
+
     fun offerPushPath(path: String?) {
         val trimmed = path?.trim().orEmpty()
         if (trimmed.isNotEmpty()) {
@@ -41,6 +44,19 @@ class AppContainer(
         val path = _pendingPushPath.value
         _pendingPushPath.value = null
         return path
+    }
+
+    fun offerConfirmationToken(token: String?) {
+        val trimmed = token?.trim().orEmpty()
+        if (trimmed.isNotEmpty()) {
+            _pendingConfirmationToken.value = trimmed
+        }
+    }
+
+    fun consumeConfirmationToken(): String? {
+        val token = _pendingConfirmationToken.value
+        _pendingConfirmationToken.value = null
+        return token
     }
 
     suspend fun start() {

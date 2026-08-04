@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.flipflapp.android.R
 import fr.flipflapp.android.core.designsystem.LoadStateView
+import fr.flipflapp.android.core.designsystem.RefreshWhenVisible
 import fr.flipflapp.android.core.designsystem.components.FfNotificationRow
 import fr.flipflapp.android.core.designsystem.components.FfTextButton
 import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
@@ -28,10 +30,16 @@ import fr.flipflapp.android.core.models.EventId
 @Composable
 fun NotificationsScreen(
     viewModel: NotificationsViewModel,
+    visible: Boolean,
     onOpenEvent: (EventId) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val refreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val spacing = FlipflappThemeTokens.spacing
+
+    RefreshWhenVisible(active = visible) {
+        viewModel.refresh(silent = true)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -47,25 +55,31 @@ fun NotificationsScreen(
             )
         },
     ) { padding ->
-        LoadStateView(
-            state = state,
-            emptyMessage = stringResource(R.string.notifications_empty),
-            onRetry = viewModel::refresh,
-            modifier = Modifier.padding(padding),
-        ) { items ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(spacing.md),
-                verticalArrangement = Arrangement.spacedBy(spacing.xs),
-            ) {
-                items(items, key = { it.id.value }) { notification ->
-                    FfNotificationRow(
-                        notification = notification,
-                        title = notificationTitle(notification),
-                        onRead = { viewModel.markRead(notification.id) },
-                        onDelete = { viewModel.delete(notification.id) },
-                        onOpen = notification.openEventAction(onOpenEvent),
-                    )
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { viewModel.refresh(fromUser = true) },
+            modifier = Modifier.fillMaxSize().padding(padding),
+        ) {
+            LoadStateView(
+                state = state,
+                emptyTitle = stringResource(R.string.notifications_empty_title),
+                emptyMessage = stringResource(R.string.notifications_empty_message),
+                onRetry = { viewModel.refresh() },
+            ) { items ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                ) {
+                    items(items, key = { it.id.value }) { notification ->
+                        FfNotificationRow(
+                            notification = notification,
+                            title = notificationTitle(notification),
+                            onRead = { viewModel.markRead(notification.id) },
+                            onDelete = { viewModel.delete(notification.id) },
+                            onOpen = notification.openEventAction(onOpenEvent),
+                        )
+                    }
                 }
             }
         }

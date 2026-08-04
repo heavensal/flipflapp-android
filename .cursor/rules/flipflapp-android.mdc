@@ -26,7 +26,7 @@ Native Kotlin/Compose client for the FlipFlapp football-event MVP. Read [docs/PR
 ## Doc map
 
 | Topic | Doc |
-|-------|-----|
+| ------- | ----- |
 | Product | [PROJECT.md](../../docs/PROJECT.md) |
 | Domain | [DOMAIN.md](../../docs/DOMAIN.md) |
 | JSON API | [API.md](../../docs/API.md) |
@@ -43,8 +43,14 @@ Native Kotlin/Compose client for the FlipFlapp football-event MVP. Read [docs/PR
 
 Feature workflow: [.cursor/skills/flipflapp-android/SKILL.md](../skills/flipflapp-android/SKILL.md)
 
-Authoritative backend (sibling checkout):
+API contract (LLM-ready bundles — prefer over Swagger UI):
 
-- `../flipflapp-rails/docs/DOMAIN.md`
-- `../flipflapp-rails/docs/API.md`
-- `../flipflapp-rails/swagger/v1/swagger.yaml`
+- [docs/mobile/README.md](../../docs/mobile/README.md) — index
+- [docs/mobile/auth/](../../docs/mobile/auth/) — register, sign-in, confirm, reset
+- [docs/mobile/users/](../../docs/mobile/users/) — profile, avatar
+- [docs/mobile/events/](../../docs/mobile/events/) — events, participants, invitations
+- [docs/mobile/notifications/](../../docs/mobile/notifications/) — inbox
+- [docs/mobile/device_tokens/](../../docs/mobile/device_tokens/) — FCM
+- [docs/api/v1/](../../docs/api/v1/) — EventTeams, Friendships
+
+Domain truth (sibling checkout): `../flipflapp-rails/docs/DOMAIN.md`

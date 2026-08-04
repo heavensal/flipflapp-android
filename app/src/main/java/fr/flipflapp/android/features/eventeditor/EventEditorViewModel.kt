@@ -132,10 +132,12 @@ class EventEditorViewModel(
                     location = state.location.trim(),
                     startTime = state.startTime.trim(),
                     numberOfParticipants = state.capacity.toIntOrNull() ?: 0,
-                    price = MoneyFormat.normalizeWholeEuros(state.price),
+                    price = state.price.toBigDecimalOrNull()?.toDouble() ?: 0.0,
                     isPrivate = state.isPrivate,
-                    latitude = state.latitude.trim(),
-                    longitude = state.longitude.trim(),
+                    latitude = state.latitude.toDoubleOrNull()
+                        ?: error("Latitude invalide."),
+                    longitude = state.longitude.toDoubleOrNull()
+                        ?: error("Longitude invalide."),
                 )
                 val event = if (eventId == null) {
                     api.createEvent(input)

@@ -37,6 +37,7 @@ fun SignInScreen(
     viewModel: AuthenticationViewModel,
     onRegister: () -> Unit,
     onRecoverPassword: () -> Unit,
+    onConfirmAccount: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     AuthFormScaffold(
@@ -70,6 +71,10 @@ fun SignInScreen(
             text = stringResource(R.string.auth_forgot_password),
             onClick = onRecoverPassword,
         )
+        FfTextButton(
+            text = stringResource(R.string.auth_confirm_with_token),
+            onClick = onConfirmAccount,
+        )
         FfSecondaryButton(
             text = stringResource(R.string.auth_create_account),
             onClick = onRegister,
@@ -81,6 +86,7 @@ fun SignInScreen(
 fun RegistrationScreen(
     viewModel: AuthenticationViewModel,
     onBack: () -> Unit,
+    onConfirmWithToken: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     AuthFormScaffold(
@@ -124,6 +130,53 @@ fun RegistrationScreen(
         FfTextButton(
             text = stringResource(R.string.auth_resend_confirmation),
             onClick = viewModel::resendConfirmation,
+        )
+        FfTextButton(
+            text = stringResource(R.string.auth_confirm_with_token),
+            onClick = onConfirmWithToken,
+        )
+        FfTextButton(
+            text = stringResource(R.string.action_back),
+            onClick = onBack,
+        )
+    }
+}
+
+@Composable
+fun ConfirmationScreen(
+    viewModel: AuthenticationViewModel,
+    onBack: () -> Unit,
+) {
+    val ui by viewModel.ui.collectAsStateWithLifecycle()
+    AuthFormScaffold(
+        title = stringResource(R.string.auth_confirm_title),
+        subtitle = stringResource(R.string.auth_confirm_subtitle),
+    ) {
+        FfTextField(
+            value = ui.email,
+            onValueChange = viewModel::updateEmail,
+            label = stringResource(R.string.auth_email),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        )
+        FfTextField(
+            value = ui.confirmationToken,
+            onValueChange = viewModel::updateConfirmationToken,
+            label = stringResource(R.string.auth_confirmation_token),
+        )
+        AuthMessages(ui = ui)
+        FfPrimaryButton(
+            text = if (ui.isSubmitting) {
+                stringResource(R.string.auth_confirming)
+            } else {
+                stringResource(R.string.auth_confirm_account)
+            },
+            onClick = viewModel::confirmAccount,
+            enabled = !ui.isSubmitting && ui.confirmationToken.isNotBlank(),
+        )
+        FfSecondaryButton(
+            text = stringResource(R.string.auth_resend_confirmation),
+            onClick = viewModel::resendConfirmation,
+            enabled = !ui.isSubmitting && ui.email.isNotBlank(),
         )
         FfTextButton(
             text = stringResource(R.string.action_back),

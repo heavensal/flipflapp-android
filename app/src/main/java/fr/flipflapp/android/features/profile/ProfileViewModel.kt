@@ -12,8 +12,6 @@ import fr.flipflapp.android.core.api.ApiError
 import fr.flipflapp.android.core.api.UserUpdateInput
 import fr.flipflapp.android.core.api.userMessage
 import fr.flipflapp.android.core.models.CurrentUser
-import fr.flipflapp.android.core.models.PublicUser
-import fr.flipflapp.android.core.models.UserId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +26,7 @@ data class ProfileUiState(
     val email: String = "",
     val password: String = "",
     val passwordConfirmation: String = "",
+    val confirmationToken: String = "",
     val isSubmitting: Boolean = false,
     val isUploadingAvatar: Boolean = false,
     val message: String? = null,
@@ -41,9 +40,6 @@ class ProfileViewModel(
 ) : ViewModel() {
     private val _ui = MutableStateFlow(ProfileUiState())
     val ui: StateFlow<ProfileUiState> = _ui.asStateFlow()
-
-    private val _publicUser = MutableStateFlow<PublicUser?>(null)
-    val publicUser: StateFlow<PublicUser?> = _publicUser.asStateFlow()
 
     fun hydrate(user: CurrentUser) {
         _ui.update {
@@ -76,7 +72,11 @@ class ProfileViewModel(
                 session.updateCurrentUser(updated)
                 _ui.update {
                     it.copy(
-                        message = "Profil mis à jour.",
+                        message = if (updated.unconfirmedEmail != null) {
+                            "Vérifiez ${updated.unconfirmedEmail} pour confirmer le nouvel e-mail."
+                        } else {
+                            "Profil mis à jour."
+                        },
                         password = "",
                         passwordConfirmation = "",
                     )
@@ -88,6 +88,53 @@ class ProfileViewModel(
                 _ui.update { it.copy(errorMessage = error.message) }
             } finally {
                 _ui.update { it.copy(isSubmitting = false) }
+            }
+        }
+    }
+
+    fun confirmPendingEmail() {
+        val token = _ui.value.confirmationToken.trim()
+        if (token.isEmpty()) {
+            _ui.update { it.copy(errorMessage = "Le jeton de confirmation est requis.") }
+            return
+        }
+        viewModelScope.launch {
+            _ui.update { it.copy(isSubmitting = true, errorMessage = null, message = null) }
+            try {
+                session.confirmUser(token)
+                _ui.update {
+                    it.copy(
+                        confirmationToken = "",
+                        message = "E-mail confirmé.",
+                    )
+                }
+            } catch (error: ApiError) {
+                session.handleApiError(error)
+                _ui.update { it.copy(errorMessage = error.userMessage()) }
+            } catch (error: Exception) {
+                _ui.update { it.copy(errorMessage = error.message) }
+            } finally {
+                _ui.update { it.copy(isSubmitting = false) }
+            }
+        }
+    }
+
+    fun removeAvatar() {
+        viewModelScope.launch {
+            _ui.update {
+                it.copy(isUploadingAvatar = true, errorMessage = null, message = null)
+            }
+            try {
+                val updated = api.updateCurrentUser(UserUpdateInput(removeAvatar = true))
+                session.updateCurrentUser(updated)
+                _ui.update { it.copy(message = "Photo de profil supprimée.") }
+            } catch (error: ApiError) {
+                session.handleApiError(error)
+                _ui.update { it.copy(errorMessage = error.userMessage()) }
+            } catch (error: Exception) {
+                _ui.update { it.copy(errorMessage = error.message) }
+            } finally {
+                _ui.update { it.copy(isUploadingAvatar = false) }
             }
         }
     }
@@ -115,17 +162,6 @@ class ProfileViewModel(
                 }
             } finally {
                 _ui.update { it.copy(isUploadingAvatar = false) }
-            }
-        }
-    }
-
-    fun loadPublicUser(id: UserId) {
-        viewModelScope.launch {
-            try {
-                _publicUser.value = api.user(id)
-            } catch (error: ApiError) {
-                session.handleApiError(error)
-                _publicUser.value = null
             }
         }
     }

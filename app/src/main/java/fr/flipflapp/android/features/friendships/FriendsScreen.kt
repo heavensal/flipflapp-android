@@ -13,11 +13,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonSearch
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,10 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.flipflapp.android.R
 import fr.flipflapp.android.core.designsystem.LoadStateView
+import fr.flipflapp.android.core.designsystem.RefreshWhenVisible
 import fr.flipflapp.android.core.designsystem.components.FfAvatar
 import fr.flipflapp.android.core.designsystem.components.FfButtonSize
 import fr.flipflapp.android.core.designsystem.components.FfIconButton
 import fr.flipflapp.android.core.designsystem.components.FfIconButtonTone
+import fr.flipflapp.android.core.designsystem.components.FfInlineEmptyHint
 import fr.flipflapp.android.core.designsystem.components.FfListRow
 import fr.flipflapp.android.core.designsystem.components.FfPrimaryButton
 import fr.flipflapp.android.core.designsystem.components.FfSecondaryButton
@@ -47,6 +51,7 @@ import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
 import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
 import fr.flipflapp.android.core.models.Friendship
 import fr.flipflapp.android.core.models.FriendshipBuckets
+import fr.flipflapp.android.core.models.FriendshipId
 import fr.flipflapp.android.core.models.PublicUser
 import fr.flipflapp.android.core.models.UserId
 
@@ -59,121 +64,197 @@ private const val TabDeclined = "declined"
 @Composable
 fun FriendsScreen(
     viewModel: FriendsViewModel,
+    visible: Boolean,
     currentUserId: UserId?,
     onOpenUser: (UserId) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val refreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.searchResults.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val spacing = FlipflappThemeTokens.spacing
     var selectedTab by rememberSaveable { mutableStateOf(TabFriends) }
 
+    RefreshWhenVisible(active = visible) {
+        viewModel.refresh(silent = true)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { FfTopAppBar(title = stringResource(R.string.friends_title)) },
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            FfTextField(
-                value = query,
-                onValueChange = viewModel::updateQuery,
-                label = stringResource(R.string.friends_search_label),
-                supportingText = stringResource(R.string.friends_search_hint),
-                modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.sm),
-            )
-            message?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = spacing.md),
-                )
-            }
-            if (results.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.friends_results),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = FlipflappThemeTokens.extras.title,
-                    modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xs),
-                )
-                results.forEach { user ->
-                    SearchResultRow(
-                        user = user,
-                        onAdd = { viewModel.sendRequest(user.id) },
-                        onOpen = { onOpenUser(user.id) },
-                        modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xxs),
-                    )
-                }
-            }
-
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { viewModel.refresh(fromUser = true) },
+            modifier = Modifier.fillMaxSize().padding(padding),
+        ) {
             LoadStateView(
                 state = state,
-                emptyMessage = stringResource(R.string.friends_empty),
-                onRetry = viewModel::refresh,
+                emptyTitle = stringResource(R.string.friends_error_title),
+                onRetry = { viewModel.refresh() },
             ) { buckets ->
-                val tabs = buildTabs(buckets)
-                LaunchedEffect(buckets.declined.size, selectedTab) {
-                    if (selectedTab == TabDeclined && buckets.declined.isEmpty()) {
-                        selectedTab = TabFriends
-                    }
-                }
-                FfTabs(
-                    tabs = tabs,
-                    selectedKey = selectedTab,
-                    onSelect = { selectedTab = it },
-                    modifier = Modifier.padding(horizontal = spacing.md),
+                FriendsContent(
+                    buckets = buckets,
+                    query = query,
+                    results = results,
+                    message = message,
+                    selectedTab = selectedTab,
+                    currentUserId = currentUserId,
+                    onQueryChange = viewModel::updateQuery,
+                    onSelectTab = { selectedTab = it },
+                    onOpenUser = onOpenUser,
+                    onSendRequest = viewModel::sendRequest,
+                    onAccept = viewModel::accept,
+                    onDecline = viewModel::decline,
+                    onRemove = viewModel::remove,
                 )
-                val items = when (selectedTab) {
-                    TabReceived -> buckets.received
-                    TabSent -> buckets.sent
-                    TabDeclined -> buckets.declined
-                    else -> buckets.accepted
-                }
-                LazyColumn(
-                    contentPadding = PaddingValues(spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(spacing.sm),
-                ) {
-                    items(items, key = { it.id.value }) { friendship ->
-                        when (selectedTab) {
-                            TabReceived -> FriendshipActionRow(
-                                friendship = friendship,
-                                currentUserId = currentUserId,
-                                primary = stringResource(R.string.friends_accept) to {
-                                    viewModel.accept(friendship.id)
-                                },
-                                secondary = stringResource(R.string.friends_decline) to {
-                                    viewModel.decline(friendship.id)
-                                },
-                                onOpen = onOpenUser,
-                            )
-                            TabSent -> FriendshipActionRow(
-                                friendship = friendship,
-                                currentUserId = currentUserId,
-                                primary = stringResource(R.string.friends_cancel) to {
-                                    viewModel.remove(friendship.id)
-                                },
-                                onOpen = onOpenUser,
-                            )
-                            TabDeclined -> FriendshipActionRow(
-                                friendship = friendship,
-                                currentUserId = currentUserId,
-                                primary = stringResource(R.string.friends_delete) to {
-                                    viewModel.remove(friendship.id)
-                                },
-                                onOpen = onOpenUser,
-                            )
-                            else -> FriendListRow(
-                                friendship = friendship,
-                                currentUserId = currentUserId,
-                                onOpen = onOpenUser,
-                                onRemove = { viewModel.remove(friendship.id) },
-                            )
-                        }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FriendsContent(
+    buckets: FriendshipBuckets,
+    query: String,
+    results: List<PublicUser>,
+    message: String?,
+    selectedTab: String,
+    currentUserId: UserId?,
+    onQueryChange: (String) -> Unit,
+    onSelectTab: (String) -> Unit,
+    onOpenUser: (UserId) -> Unit,
+    onSendRequest: (UserId) -> Unit,
+    onAccept: (FriendshipId) -> Unit,
+    onDecline: (FriendshipId) -> Unit,
+    onRemove: (FriendshipId) -> Unit,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+
+    LaunchedEffect(buckets.declined.size, selectedTab) {
+        if (selectedTab == TabDeclined && buckets.declined.isEmpty()) {
+            onSelectTab(TabFriends)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        FfTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            label = stringResource(R.string.friends_search_label),
+            supportingText = stringResource(R.string.friends_search_hint),
+            modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.sm),
+        )
+        message?.let {
+            Text(
+                it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = spacing.md),
+            )
+        }
+        if (results.isNotEmpty()) {
+            Text(
+                stringResource(R.string.friends_results),
+                style = MaterialTheme.typography.titleMedium,
+                color = FlipflappThemeTokens.extras.title,
+                modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xs),
+            )
+            results.forEach { user ->
+                SearchResultRow(
+                    user = user,
+                    onAdd = { onSendRequest(user.id) },
+                    onOpen = { onOpenUser(user.id) },
+                    modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xxs),
+                )
+            }
+        }
+
+        val tabs = buildTabs(buckets)
+        FfTabs(
+            tabs = tabs,
+            selectedKey = selectedTab,
+            onSelect = onSelectTab,
+            modifier = Modifier.padding(horizontal = spacing.md),
+        )
+        val items = when (selectedTab) {
+            TabReceived -> buckets.received
+            TabSent -> buckets.sent
+            TabDeclined -> buckets.declined
+            else -> buckets.accepted
+        }
+        if (items.isEmpty()) {
+            TabEmptyHint(
+                tab = selectedTab,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(spacing.md),
+                verticalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                items(items, key = { it.id.value }) { friendship ->
+                    when (selectedTab) {
+                        TabReceived -> FriendshipActionRow(
+                            friendship = friendship,
+                            currentUserId = currentUserId,
+                            primary = stringResource(R.string.friends_accept) to {
+                                onAccept(friendship.id)
+                            },
+                            secondary = stringResource(R.string.friends_decline) to {
+                                onDecline(friendship.id)
+                            },
+                            onOpen = onOpenUser,
+                        )
+                        TabSent -> FriendshipActionRow(
+                            friendship = friendship,
+                            currentUserId = currentUserId,
+                            primary = stringResource(R.string.friends_cancel) to {
+                                onRemove(friendship.id)
+                            },
+                            onOpen = onOpenUser,
+                        )
+                        TabDeclined -> FriendshipActionRow(
+                            friendship = friendship,
+                            currentUserId = currentUserId,
+                            primary = stringResource(R.string.friends_delete) to {
+                                onRemove(friendship.id)
+                            },
+                            onOpen = onOpenUser,
+                        )
+                        else -> FriendListRow(
+                            friendship = friendship,
+                            currentUserId = currentUserId,
+                            onOpen = onOpenUser,
+                            onRemove = { onRemove(friendship.id) },
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TabEmptyHint(tab: String, modifier: Modifier = Modifier) {
+    val (title, message) = when (tab) {
+        TabReceived -> stringResource(R.string.friends_tab_received_empty_title) to
+            stringResource(R.string.friends_tab_received_empty_message)
+        TabSent -> stringResource(R.string.friends_tab_sent_empty_title) to
+            stringResource(R.string.friends_tab_sent_empty_message)
+        TabDeclined -> stringResource(R.string.friends_tab_declined_empty_title) to
+            stringResource(R.string.friends_tab_declined_empty_message)
+        else -> stringResource(R.string.friends_tab_accepted_empty_title) to
+            stringResource(R.string.friends_tab_accepted_empty_message)
+    }
+    FfInlineEmptyHint(
+        title = title,
+        message = message,
+        icon = Icons.Outlined.PersonSearch,
+        modifier = modifier,
+    )
 }
 
 @Composable

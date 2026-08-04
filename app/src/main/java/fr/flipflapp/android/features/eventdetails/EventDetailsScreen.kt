@@ -1,23 +1,31 @@
 package fr.flipflapp.android.features.eventdetails
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -35,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.flipflapp.android.R
 import fr.flipflapp.android.core.designsystem.LoadStateView
+import fr.flipflapp.android.core.designsystem.RefreshWhenVisible
 import fr.flipflapp.android.core.designsystem.components.FfAvatar
 import fr.flipflapp.android.core.designsystem.components.FfBadge
 import fr.flipflapp.android.core.designsystem.components.FfBadgeTone
@@ -42,19 +51,22 @@ import fr.flipflapp.android.core.designsystem.components.FfButtonSize
 import fr.flipflapp.android.core.designsystem.components.FfCard
 import fr.flipflapp.android.core.designsystem.components.FfChipTone
 import fr.flipflapp.android.core.designsystem.components.FfDestructiveButton
+import fr.flipflapp.android.core.designsystem.components.FfIconButton
+import fr.flipflapp.android.core.designsystem.components.FfIconButtonTone
 import fr.flipflapp.android.core.designsystem.components.FfListRow
 import fr.flipflapp.android.core.designsystem.components.FfMeta
 import fr.flipflapp.android.core.designsystem.components.FfMetaRow
 import fr.flipflapp.android.core.designsystem.components.FfPlayerChip
 import fr.flipflapp.android.core.designsystem.components.FfPrimaryButton
-import fr.flipflapp.android.core.designsystem.components.FfSecondaryButton
 import fr.flipflapp.android.core.designsystem.components.FfStatusChip
 import fr.flipflapp.android.core.designsystem.components.FfTeamPanel
 import fr.flipflapp.android.core.designsystem.components.FfTextButton
 import fr.flipflapp.android.core.designsystem.components.FfTextField
 import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
+import fr.flipflapp.android.core.designsystem.theme.FlipflappButtonSmShape
 import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
 import fr.flipflapp.android.core.models.Event
+import fr.flipflapp.android.core.models.EventParticipant
 import fr.flipflapp.android.core.models.EventTeam
 import fr.flipflapp.android.core.models.UserId
 import fr.flipflapp.android.core.util.DateTimeFormat
@@ -79,6 +91,10 @@ fun EventDetailsScreen(
     val spacing = FlipflappThemeTokens.spacing
     val extras = FlipflappThemeTokens.extras
 
+    RefreshWhenVisible(active = true) {
+        viewModel.refresh(silent = true)
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -90,11 +106,14 @@ fun EventDetailsScreen(
     ) { padding ->
         LoadStateView(
             state = state,
-            emptyMessage = stringResource(R.string.event_not_found),
+            emptyTitle = stringResource(R.string.event_not_found),
             onRetry = viewModel::refresh,
             modifier = Modifier.padding(padding),
         ) { data ->
             val mine = data.participants.firstOrNull { it.userId == currentUserId }
+            val teamsLayout = layoutEventTeams(data.teams)
+            val alreadyJoined = data.event.isParticipant(currentUserId)
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(spacing.md),
@@ -143,15 +162,31 @@ fun EventDetailsScreen(
                                     )
                                 }
                             }
-                            FfMetaRow(
-                                icon = Icons.Outlined.Groups,
-                                text = stringResource(
-                                    R.string.event_capacity_detail,
-                                    data.event.participantsCount,
-                                    data.event.numberOfParticipants,
-                                    data.event.spotsRemaining,
-                                ),
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                FfMetaRow(
+                                    icon = Icons.Outlined.Groups,
+                                    text = stringResource(
+                                        R.string.event_capacity_detail,
+                                        data.event.participantsCount,
+                                        data.event.numberOfParticipants,
+                                        data.event.spotsRemaining,
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (data.event.currentUser?.canInvite == true) {
+                                    FfIconButton(onClick = onInvite) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.PersonAdd,
+                                            contentDescription = stringResource(R.string.event_invite_cd),
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    }
+                                }
+                            }
                             FfStatusChip(
                                 label = fillLevelLabel(data.event.fillLevel),
                                 tone = when (data.event.fillLevel) {
@@ -181,6 +216,18 @@ fun EventDetailsScreen(
                                     ),
                                 )
                                 FfAvatar(user = data.event.user, size = 40.dp)
+                                if (data.event.currentUser?.author == true) {
+                                    FfIconButton(
+                                        onClick = onEdit,
+                                        tone = FfIconButtonTone.Ghost,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Edit,
+                                            contentDescription = stringResource(R.string.event_edit_cd),
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    }
+                                }
                             }
                             message?.let {
                                 Text(
@@ -193,84 +240,25 @@ fun EventDetailsScreen(
                     }
                 }
 
-                items(data.teams, key = { it.id.value }) { team ->
-                    val teamParticipants = data.participants.filter { it.eventTeamId == team.id }
-                    val isCurrentTeam = mine?.eventTeamId == team.id
-                    FfTeamPanel(
-                        title = team.label,
-                        slot = team.slot,
-                        capacityLabel = stringResource(
-                            R.string.event_team_players,
-                            teamParticipants.size,
-                        ),
-                    ) {
-                        if (teamParticipants.isEmpty()) {
-                            Text(
-                                stringResource(R.string.event_no_players),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.55f),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        } else {
-                            teamParticipants.forEach { participant ->
-                                FfPlayerChip(
-                                    user = participant.user,
-                                    slot = team.slot,
-                                    highlighted = participant.userId == currentUserId,
-                                )
-                            }
-                        }
-                        if (isCurrentTeam) {
-                            FfStatusChip(
-                                label = stringResource(R.string.event_your_team),
-                                tone = FfChipTone.Success,
-                            )
-                        } else {
-                            FfPrimaryButton(
-                                text = participationLabel(mine != null, team.slot),
-                                onClick = { viewModel.join(team.id) },
-                                enabled = !busy,
-                                size = FfButtonSize.Small,
-                            )
-                        }
-                        if (team.countable && data.event.currentUser?.participant == true) {
-                            FfTextButton(
-                                text = stringResource(R.string.event_rename_team),
-                                onClick = {
-                                    renameTeam = team
-                                    renameLabel = team.label
-                                },
-                            )
-                        }
-                    }
+                item {
+                    EventTeamsGrid(
+                        layout = teamsLayout,
+                        event = data.event,
+                        participants = data.participants,
+                        currentUserId = currentUserId,
+                        alreadyJoined = alreadyJoined,
+                        busy = busy,
+                        onJoin = viewModel::join,
+                        onRename = { team ->
+                            renameTeam = team
+                            renameLabel = team.label
+                        },
+                    )
                 }
 
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                        if (mine != null) {
-                            FfSecondaryButton(
-                                text = stringResource(R.string.event_leave),
-                                onClick = { viewModel.leave(mine.id) },
-                                enabled = !busy,
-                            )
-                        }
-                        if (data.event.currentUser?.canInvite == true) {
-                            FfPrimaryButton(
-                                text = stringResource(R.string.event_invite_friends),
-                                onClick = onInvite,
-                            )
-                        }
-                        if (data.event.currentUser?.author == true) {
-                            FfSecondaryButton(
-                                text = stringResource(R.string.event_edit),
-                                onClick = onEdit,
-                            )
-                            FfDestructiveButton(
-                                text = stringResource(R.string.event_delete),
-                                onClick = { confirmDelete = true },
-                            )
-                        }
-                        if (data.invitations.isNotEmpty()) {
+                if (data.invitations.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
                             Text(
                                 stringResource(R.string.event_invitations),
                                 style = MaterialTheme.typography.titleMedium,
@@ -284,6 +272,45 @@ fun EventDetailsScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.White,
                                         modifier = Modifier.padding(start = spacing.sm),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = spacing.lg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when {
+                            data.event.currentUser?.author == true -> {
+                                FfDestructiveButton(
+                                    text = stringResource(R.string.event_delete),
+                                    onClick = { confirmDelete = true },
+                                    enabled = !busy,
+                                    fillMaxWidth = false,
+                                )
+                            }
+                            mine != null -> {
+                                Button(
+                                    onClick = { viewModel.leave(mine.id) },
+                                    enabled = !busy,
+                                    shape = FlipflappButtonSmShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError,
+                                    ),
+                                    contentPadding = PaddingValues(0.dp),
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                                        contentDescription = stringResource(R.string.event_leave_cd),
+                                        modifier = Modifier.size(24.dp),
                                     )
                                 }
                             }
@@ -349,6 +376,210 @@ fun EventDetailsScreen(
 }
 
 @Composable
+private fun EventTeamsGrid(
+    layout: EventTeamsLayout,
+    event: Event,
+    participants: List<EventParticipant>,
+    currentUserId: UserId?,
+    alreadyJoined: Boolean,
+    busy: Boolean,
+    onJoin: (fr.flipflapp.android.core.models.EventTeamId) -> Unit,
+    onRename: (EventTeam) -> Unit,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+        ) {
+            layout.teamOne?.let { team ->
+                EventTeamPanel(
+                    team = team,
+                    event = event,
+                    participants = participantsForTeam(participants, team.id),
+                    currentUserId = currentUserId,
+                    alreadyJoined = alreadyJoined,
+                    busy = busy,
+                    benchGrid = false,
+                    canRename = team.countable && event.currentUser?.participant == true,
+                    onJoin = { onJoin(team.id) },
+                    onRename = { onRename(team) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            layout.teamTwo?.let { team ->
+                EventTeamPanel(
+                    team = team,
+                    event = event,
+                    participants = participantsForTeam(participants, team.id),
+                    currentUserId = currentUserId,
+                    alreadyJoined = alreadyJoined,
+                    busy = busy,
+                    benchGrid = false,
+                    canRename = team.countable && event.currentUser?.participant == true,
+                    onJoin = { onJoin(team.id) },
+                    onRename = { onRename(team) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        layout.bench?.let { team ->
+            EventTeamPanel(
+                team = team,
+                event = event,
+                participants = participantsForTeam(participants, team.id),
+                currentUserId = currentUserId,
+                alreadyJoined = alreadyJoined,
+                busy = busy,
+                benchGrid = true,
+                canRename = false,
+                onJoin = { onJoin(team.id) },
+                onRename = {},
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EventTeamPanel(
+    team: EventTeam,
+    event: Event,
+    participants: List<EventParticipant>,
+    currentUserId: UserId?,
+    alreadyJoined: Boolean,
+    busy: Boolean,
+    benchGrid: Boolean,
+    canRename: Boolean,
+    onJoin: () -> Unit,
+    onRename: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isCurrentTeam = participants.any { it.userId == currentUserId }
+    val capacity = countableTeamCapacity(event.numberOfParticipants, team.slot)
+    val capacityLabel = if (team.countable) {
+        stringResource(R.string.event_team_capacity, participants.size, capacity)
+    } else {
+        null
+    }
+    val showJoin = !isCurrentTeam &&
+        isTeamJoinable(team, participants.size, event.numberOfParticipants)
+
+    FfTeamPanel(
+        title = team.label,
+        slot = team.slot,
+        capacityLabel = capacityLabel,
+        modifier = modifier,
+        onRename = if (canRename) onRename else null,
+        renameContentDescription = if (canRename) {
+            stringResource(R.string.event_rename_team_cd)
+        } else {
+            null
+        },
+    ) {
+        if (participants.isEmpty()) {
+            Text(
+                stringResource(R.string.event_no_players),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.55f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else if (benchGrid) {
+            BenchPlayersGrid(
+                participants = participants,
+                currentUserId = currentUserId,
+                slot = team.slot,
+            )
+        } else {
+            participants.forEach { participant ->
+                FfPlayerChip(
+                    user = participant.user,
+                    slot = team.slot,
+                    highlighted = participant.userId == currentUserId,
+                )
+            }
+        }
+        if (showJoin) {
+            TeamJoinButton(
+                switching = alreadyJoined,
+                enabled = !busy,
+                onClick = onJoin,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BenchPlayersGrid(
+    participants: List<EventParticipant>,
+    currentUserId: UserId?,
+    slot: EventTeam.Slot,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+    participants.chunked(2).forEach { rowParticipants ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+        ) {
+            rowParticipants.forEach { participant ->
+                FfPlayerChip(
+                    user = participant.user,
+                    slot = slot,
+                    highlighted = participant.userId == currentUserId,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (rowParticipants.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TeamJoinButton(
+    switching: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (switching) {
+            FfPrimaryButton(
+                text = stringResource(R.string.event_switch_here),
+                onClick = onClick,
+                enabled = enabled,
+                fillMaxWidth = true,
+                size = FfButtonSize.Small,
+            )
+        } else {
+            Button(
+                onClick = onClick,
+                enabled = enabled,
+                shape = FlipflappButtonSmShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PersonAdd,
+                    contentDescription = stringResource(R.string.event_join_team_cd),
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun fillLevelLabel(level: Event.FillLevel): String = when (level) {
     Event.FillLevel.Open -> stringResource(R.string.event_fill_open)
     Event.FillLevel.Tight -> stringResource(R.string.event_fill_tight)
@@ -363,12 +594,4 @@ private fun eventPriceLabel(price: String): String {
     } else {
         MoneyFormat.formatEuros(price)
     }
-}
-
-@Composable
-private fun participationLabel(alreadyJoined: Boolean, slot: EventTeam.Slot): String = when {
-    alreadyJoined && slot == EventTeam.Slot.Bench -> stringResource(R.string.event_switch_bench)
-    alreadyJoined -> stringResource(R.string.event_switch_team)
-    slot == EventTeam.Slot.Bench -> stringResource(R.string.event_join_bench)
-    else -> stringResource(R.string.event_join)
 }

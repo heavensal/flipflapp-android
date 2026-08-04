@@ -1,7 +1,6 @@
 package fr.flipflapp.android.core.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,16 +15,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import fr.flipflapp.android.R
+import androidx.compose.ui.unit.dp
+import fr.flipflapp.android.core.designsystem.EmptyStateAction
 import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
 
 @Composable
 fun FfLoading(
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    androidx.compose.foundation.layout.Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
@@ -35,11 +35,12 @@ fun FfLoading(
 
 @Composable
 fun FfEmptyState(
-    message: String,
+    title: String,
     modifier: Modifier = Modifier,
+    message: String? = null,
     icon: ImageVector = Icons.Outlined.Inbox,
-    actionLabel: String? = stringResource(R.string.action_retry),
-    onAction: (() -> Unit)? = null,
+    primaryAction: EmptyStateAction? = null,
+    secondaryAction: EmptyStateAction? = null,
 ) {
     val spacing = FlipflappThemeTokens.spacing
     Column(
@@ -56,17 +57,87 @@ fun FfEmptyState(
             modifier = Modifier.size(spacing.xxl),
         )
         Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = title,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = FlipflappThemeTokens.extras.title,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = spacing.md),
         )
-        if (onAction != null && actionLabel != null) {
+        message?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = spacing.sm),
+            )
+        }
+        primaryAction?.let { action ->
             FfPrimaryButton(
-                text = actionLabel,
-                onClick = onAction,
+                text = action.label,
+                onClick = action.onClick,
                 fillMaxWidth = false,
+                modifier = Modifier.padding(top = spacing.lg),
+            )
+        }
+        secondaryAction?.let { action ->
+            FfSecondaryButton(
+                text = action.label,
+                onClick = action.onClick,
+                fillMaxWidth = false,
+                modifier = Modifier.padding(top = spacing.sm),
+            )
+        }
+    }
+}
+
+/** Inline empty hint for lists that already have surrounding chrome (tabs, search, etc.). */
+@Composable
+fun FfInlineEmptyHint(
+    title: String,
+    modifier: Modifier = Modifier,
+    message: String? = null,
+    icon: ImageVector? = null,
+    action: EmptyStateAction? = null,
+) {
+    val spacing = FlipflappThemeTokens.spacing
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(spacing.lg),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        icon?.let {
+            Icon(
+                imageVector = it,
+                contentDescription = null,
+                tint = FlipflappThemeTokens.extras.muted,
+                modifier = Modifier.size(spacing.xl),
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = FlipflappThemeTokens.extras.title,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = if (icon != null) spacing.sm else 0.dp),
+        )
+        message?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = spacing.xs),
+            )
+        }
+        action?.let {
+            FfPrimaryButton(
+                text = it.label,
+                onClick = it.onClick,
+                fillMaxWidth = false,
+                size = FfButtonSize.Small,
                 modifier = Modifier.padding(top = spacing.md),
             )
         }

@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import fr.flipflapp.android.app.FlipflappApp
+import fr.flipflapp.android.core.auth.AuthDeepLink
 import fr.flipflapp.android.core.designsystem.theme.FlipflappPalette
 import fr.flipflapp.android.core.designsystem.theme.FlipflappTheme
 import fr.flipflapp.android.core.push.PushNotifications
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
         PushNotifications.ensureChannel(this)
         requestNotificationPermissionIfNeeded()
         capturePushPath(intent)
+        captureConfirmationToken(intent)
         setContent {
             FlipflappTheme {
                 FlipflappApp(container = app.container)
@@ -44,11 +46,18 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         capturePushPath(intent)
+        captureConfirmationToken(intent)
     }
 
     private fun capturePushPath(intent: Intent?) {
         val app = application as FlipflappApplication
         app.container.offerPushPath(PushNotifications.pathFromIntent(intent))
+    }
+
+    private fun captureConfirmationToken(intent: Intent?) {
+        val token = AuthDeepLink.confirmationTokenFromIntent(intent) ?: return
+        val app = application as FlipflappApplication
+        app.container.offerConfirmationToken(token)
     }
 
     private fun requestNotificationPermissionIfNeeded() {

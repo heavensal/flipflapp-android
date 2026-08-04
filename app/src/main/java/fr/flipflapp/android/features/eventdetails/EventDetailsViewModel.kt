@@ -44,54 +44,109 @@ class EventDetailsViewModel(
 
     init { refresh() }
 
-    fun refresh() {
+    fun refresh(silent: Boolean = false) {
         viewModelScope.launch {
-            _state.value = LoadState.Loading
+            if (!silent) {
+                _state.value = LoadState.Loading
+            }
             try {
-                val eventDeferred = async { api.event(eventId) }
-                val teamsDeferred = async { api.eventTeams(eventId) }
-                val participantsDeferred = async { api.eventParticipants(eventId) }
-                val invitationsDeferred = async { api.invitations(eventId) }
-                val data = EventDetailsData(
-                    event = eventDeferred.await(),
-                    teams = teamsDeferred.await(),
-                    participants = participantsDeferred.await(),
-                    invitations = invitationsDeferred.await(),
-                )
+                val data = fetchAll()
                 _state.value = LoadState.Content(data)
             } catch (error: ApiError) {
                 session.handleApiError(error)
-                _state.value = LoadState.Failed(error.userMessage())
+                if (_state.value !is LoadState.Content) {
+                    _state.value = LoadState.Failed(error.userMessage())
+                }
             } catch (error: Exception) {
-                _state.value = LoadState.Failed(error.message ?: "Chargement impossible.")
+                if (_state.value !is LoadState.Content) {
+                    _state.value = LoadState.Failed(error.message ?: "Chargement impossible.")
+                }
             }
         }
     }
 
     fun join(teamId: EventTeamId) = mutate {
+        val previousTeamId = currentContent()?.participants
+            ?.firstOrNull { it.userId == session.currentUser?.id }
+            ?.eventTeamId
         api.joinEvent(eventId, teamId)
-        refresh()
+        refreshParticipantsForTeam(teamId)
+        if (previousTeamId != null && previousTeamId != teamId) {
+            refreshParticipantsForTeam(previousTeamId)
+        }
+        refreshEventSummary()
     }
 
     fun leave(participantId: fr.flipflapp.android.core.models.EventParticipantId) = mutate {
         api.leaveEvent(participantId)
-        refresh()
+        refreshEventSummary()
+        refreshAllParticipants()
     }
 
     fun renameTeam(teamId: EventTeamId, label: String) = mutate {
-        api.renameEventTeam(eventId, teamId, label)
-        refresh()
+        val updatedTeam = api.renameEventTeam(eventId, teamId, label)
+        updateContent { current ->
+            current.copy(
+                teams = current.teams.map { team ->
+                    if (team.id == updatedTeam.id) updatedTeam else team
+                },
+            )
+        }
     }
 
     fun invite(userIds: List<UserId>) = mutate {
         api.createInvitations(eventId, userIds)
-        refresh()
+        refreshInvitations()
     }
 
     fun deleteEvent(onDeleted: () -> Unit) = mutate {
         api.deleteEvent(eventId)
         onDeleted()
     }
+
+    private suspend fun fetchAll(): EventDetailsData {
+        val eventDeferred = async { api.event(eventId) }
+        val teamsDeferred = async { api.eventTeams(eventId) }
+        val participantsDeferred = async { api.eventParticipants(eventId) }
+        val invitationsDeferred = async { api.invitations(eventId) }
+        return EventDetailsData(
+            event = eventDeferred.await(),
+            teams = teamsDeferred.await(),
+            participants = participantsDeferred.await(),
+            invitations = invitationsDeferred.await(),
+        )
+    }
+
+    private suspend fun refreshEventSummary() {
+        val event = api.event(eventId)
+        updateContent { it.copy(event = event) }
+    }
+
+    private suspend fun refreshAllParticipants() {
+        val participants = api.eventParticipants(eventId)
+        updateContent { it.copy(participants = participants) }
+    }
+
+    private suspend fun refreshParticipantsForTeam(teamId: EventTeamId) {
+        val teamParticipants = api.eventTeamParticipants(eventId, teamId)
+        updateContent { current ->
+            val withoutTeam = current.participants.filterNot { it.eventTeamId == teamId }
+            current.copy(participants = withoutTeam + teamParticipants)
+        }
+    }
+
+    private suspend fun refreshInvitations() {
+        val invitations = api.invitations(eventId)
+        updateContent { it.copy(invitations = invitations) }
+    }
+
+    private fun updateContent(transform: (EventDetailsData) -> EventDetailsData) {
+        val current = _state.value as? LoadState.Content ?: return
+        _state.value = LoadState.Content(transform(current.value))
+    }
+
+    private fun currentContent(): EventDetailsData? =
+        (_state.value as? LoadState.Content)?.value
 
     private fun mutate(block: suspend () -> Unit) {
         viewModelScope.launch {

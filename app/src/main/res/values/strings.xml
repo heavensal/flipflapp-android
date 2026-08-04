@@ -13,6 +13,9 @@
     <string name="action_choose">Choisir</string>
     <string name="action_ok">OK</string>
 
+    <!-- Load / error states -->
+    <string name="state_error_title">Impossible de charger</string>
+
     <!-- Tabs -->
     <string name="tab_events">Matchs</string>
     <string name="tab_friends">Amis</string>
@@ -42,6 +45,12 @@
     <string name="auth_create_account">Créer un compte</string>
     <string name="auth_register">S’inscrire</string>
     <string name="auth_resend_confirmation">Renvoyer la confirmation</string>
+    <string name="auth_confirm_with_token">J’ai reçu le jeton</string>
+    <string name="auth_confirm_title">Confirmer le compte</string>
+    <string name="auth_confirm_subtitle">Collez le jeton reçu par e-mail pour activer votre compte.</string>
+    <string name="auth_confirmation_token">Jeton de confirmation</string>
+    <string name="auth_confirm_account">Confirmer le compte</string>
+    <string name="auth_confirming">Confirmation…</string>
     <string name="auth_send_reset_link">Envoyer le lien</string>
     <string name="auth_reset_with_token_title">J’ai reçu un jeton</string>
     <string name="auth_reset_with_token_subtitle">Collez le jeton de l’e-mail et choisissez un nouveau mot de passe.</string>
@@ -52,6 +61,8 @@
     <string name="events_title">Matchs</string>
     <string name="events_create">Créer un match</string>
     <string name="events_empty">Aucun match visible pour le moment.</string>
+    <string name="events_empty_title">Aucun match à l’horizon</string>
+    <string name="events_empty_message">Organise ton premier match et invite tes amis à rejoindre une équipe.</string>
     <string name="event_private">Privé</string>
     <string name="event_public">Public</string>
     <string name="event_free">Gratuit</string>
@@ -71,12 +82,18 @@
     <string name="event_join_bench">Rejoindre le banc</string>
     <string name="event_switch_team">Changer d’équipe</string>
     <string name="event_switch_bench">Passer sur le banc</string>
+    <string name="event_switch_here">Passer ici</string>
     <string name="event_your_team">Votre équipe</string>
     <string name="event_invited_badge">Invité</string>
     <string name="event_rename_team">Renommer</string>
     <string name="event_no_players">Aucun joueur</string>
     <string name="event_leave">Quitter le match</string>
     <string name="event_invite_friends">Inviter des amis</string>
+    <string name="event_invite_title">Inviter des amis</string>
+    <string name="event_invite_empty">Aucun ami éligible à inviter.</string>
+    <string name="event_invite_empty_title">Personne à inviter</string>
+    <string name="event_invite_empty_message">Ajoute des amis ou attends qu’ils rejoignent le match avant de les inviter.</string>
+    <string name="event_invite_send">Envoyer les invitations</string>
     <string name="event_edit">Modifier</string>
     <string name="event_delete">Supprimer le match</string>
     <string name="event_invitations">Invitations</string>
@@ -87,6 +104,11 @@
     <string name="event_slot_team_one">Équipe A</string>
     <string name="event_slot_team_two">Équipe B</string>
     <string name="event_slot_bench">Banc</string>
+    <string name="event_join_team_cd">Rejoindre cette équipe</string>
+    <string name="event_leave_cd">Quitter le match</string>
+    <string name="event_edit_cd">Modifier le match</string>
+    <string name="event_invite_cd">Inviter des amis</string>
+    <string name="event_rename_team_cd">Renommer l’équipe</string>
 
     <!-- Event editor -->
     <string name="event_editor_new">Nouveau match</string>
@@ -134,11 +156,22 @@
     <string name="friends_status_pending">En attente</string>
     <string name="friends_status_accepted">Ami</string>
     <string name="friends_status_declined">Refusée</string>
+    <string name="friends_error_title">Amis indisponibles</string>
+    <string name="friends_tab_accepted_empty_title">Pas encore d’amis</string>
+    <string name="friends_tab_accepted_empty_message">Recherche quelqu’un par prénom, nom ou pseudo pour l’ajouter.</string>
+    <string name="friends_tab_received_empty_title">Aucune demande reçue</string>
+    <string name="friends_tab_received_empty_message">Quand quelqu’un t’ajoute, la demande apparaîtra ici.</string>
+    <string name="friends_tab_sent_empty_title">Aucune demande envoyée</string>
+    <string name="friends_tab_sent_empty_message">Trouve des joueurs via la recherche et envoie-leur une demande.</string>
+    <string name="friends_tab_declined_empty_title">Aucune demande refusée</string>
+    <string name="friends_tab_declined_empty_message">Les demandes que tu refuses seront listées ici.</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
     <string name="notifications_mark_all">Tout lire</string>
     <string name="notifications_empty">Aucune notification.</string>
+    <string name="notifications_empty_title">Rien à signaler</string>
+    <string name="notifications_empty_message">Invitations, rappels de match et demandes d’amis s’afficheront ici.</string>
     <string name="notifications_mark_read">Lu</string>
     <string name="notifications_view">Voir</string>
     <string name="notifications_delete">Supprimer</string>
@@ -160,5 +193,16 @@
     <string name="profile_new_password">Nouveau mot de passe</string>
     <string name="profile_sign_out">Se déconnecter</string>
     <string name="profile_change_photo">Changer la photo</string>
+    <string name="profile_remove_photo">Supprimer la photo</string>
+    <string name="profile_unconfirmed_email">Confirmez %1$s pour finaliser le changement d’e-mail.</string>
+    <string name="profile_confirm_email_cta">Confirmer l’e-mail</string>
     <string name="profile_avatar_cd">Photo de profil</string>
+    <string name="profile_add_friend">Ajouter en ami</string>
+    <string name="profile_friend_request_sent">Demande envoyée</string>
+    <string name="profile_accept_friend">Accepter</string>
+    <string name="profile_decline_friend">Refuser</string>
+    <string name="profile_unfriend">Retirer l’ami</string>
+    <string name="profile_remove_declined">Retirer de la liste</string>
+    <string name="profile_cancel_request">Annuler la demande</string>
+    <string name="profile_friends">Amis</string>
 </resources>

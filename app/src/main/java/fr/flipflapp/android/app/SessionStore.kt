@@ -55,7 +55,14 @@ class SessionStore(
     }
 
     suspend fun signIn(email: String, password: String) {
-        val session = api.signIn(email, password)
+        establishSession(api.signIn(email, password))
+    }
+
+    suspend fun confirmUser(confirmationToken: String) {
+        establishSession(api.confirmUser(confirmationToken))
+    }
+
+    private suspend fun establishSession(session: fr.flipflapp.android.core.api.AuthenticatedSession) {
         try {
             tokenStore.writeToken(session.token)
             _state.value = SessionState.SignedIn(session.user)

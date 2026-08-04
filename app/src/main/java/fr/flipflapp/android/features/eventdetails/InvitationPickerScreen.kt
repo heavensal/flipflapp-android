@@ -15,70 +15,42 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.flipflapp.android.R
-import fr.flipflapp.android.core.api.ApiClient
-import fr.flipflapp.android.core.api.ApiError
-import fr.flipflapp.android.core.api.userMessage
 import fr.flipflapp.android.core.designsystem.components.FfAvatar
 import fr.flipflapp.android.core.designsystem.components.FfEmptyState
 import fr.flipflapp.android.core.designsystem.components.FfListRow
+import fr.flipflapp.android.core.designsystem.components.FfLoading
 import fr.flipflapp.android.core.designsystem.components.FfPrimaryButton
 import fr.flipflapp.android.core.designsystem.components.FfTopAppBar
 import fr.flipflapp.android.core.designsystem.theme.FlipflappThemeTokens
-import fr.flipflapp.android.core.models.EventId
-import fr.flipflapp.android.core.models.PublicUser
 import fr.flipflapp.android.core.models.UserId
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InvitationPickerScreen(
-    eventId: EventId,
-    currentUserId: UserId,
-    api: ApiClient,
+    viewModel: InvitationPickerViewModel,
     onBack: () -> Unit,
     onInvited: () -> Unit,
 ) {
-    var candidates by remember { mutableStateOf<List<PublicUser>>(emptyList()) }
+    val ui by viewModel.state.collectAsStateWithLifecycle()
     var selected by remember { mutableStateOf<Set<UserId>>(emptySet()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val spacing = FlipflappThemeTokens.spacing
-
-    LaunchedEffect(eventId, currentUserId) {
-        try {
-            val friendships = api.friendships()
-            val participants = api.eventParticipants(eventId)
-            val invitations = api.invitations(eventId)
-            val excluded = participants.map { it.userId }.toSet() + invitations.map { it.userId }.toSet()
-            candidates = friendships.accepted
-                .map { it.otherUser(currentUserId) }
-                .distinctBy { it.id.value }
-                .filterNot { it.id in excluded }
-        } catch (errorValue: ApiError) {
-            error = errorValue.userMessage()
-        } catch (errorValue: Exception) {
-            error = errorValue.message
-        }
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             FfTopAppBar(
-                title = stringResource(R.string.invite_title),
+                title = stringResource(R.string.event_invite_title),
                 onBack = onBack,
             )
         },
@@ -88,86 +60,81 @@ fun InvitationPickerScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(spacing.md),
-            verticalArrangement = Arrangement.spacedBy(spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            error?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+            when {
+                ui.isLoading -> FfLoading()
+                ui.errorMessage != null -> FfEmptyState(
+                    title = stringResource(R.string.state_error_title),
+                    message = ui.errorMessage,
+                    primaryAction = fr.flipflapp.android.core.designsystem.EmptyStateAction(
+                        label = stringResource(R.string.action_retry),
+                        onClick = viewModel::loadCandidates,
+                    ),
                 )
-            }
-            if (candidates.isEmpty()) {
-                FfEmptyState(
-                    message = stringResource(R.string.invite_empty),
-                    actionLabel = null,
-                    onAction = null,
-                    modifier = Modifier.weight(1f),
+                ui.candidates.isEmpty() -> FfEmptyState(
+                    title = stringResource(R.string.event_invite_empty_title),
+                    message = stringResource(R.string.event_invite_empty_message),
                 )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
-                ) {
-                    items(candidates, key = { it.id.value }) { user ->
-                        val checked = user.id in selected
-                        FfListRow(
-                            onClick = {
-                                selected = if (checked) selected - user.id else selected + user.id
-                            },
-                            modifier = Modifier,
-                        ) {
-                            FfAvatar(user = user, size = 32.dp)
-                            Text(
-                                text = user.displayName,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = Color.White,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = spacing.sm),
-                            )
-                            Checkbox(
-                                checked = checked,
-                                onCheckedChange = { isChecked ->
-                                    selected = if (isChecked) {
-                                        selected + user.id
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                    ) {
+                        items(ui.candidates, key = { it.id.value }) { candidate ->
+                            val checked = candidate.id in selected
+                            FfListRow(
+                                onClick = {
+                                    selected = if (checked) {
+                                        selected - candidate.id
                                     } else {
-                                        selected - user.id
+                                        selected + candidate.id
                                     }
                                 },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = MaterialTheme.colorScheme.primary,
-                                    checkmarkColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            )
+                            ) {
+                                FfAvatar(user = candidate, size = 40.dp)
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = spacing.sm),
+                                ) {
+                                    Text(
+                                        text = candidate.displayName,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = Color.White,
+                                    )
+                                    candidate.username?.let {
+                                        Text(
+                                            text = "@$it",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = FlipflappThemeTokens.extras.secondaryText,
+                                        )
+                                    }
+                                }
+                                Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = { isChecked ->
+                                        selected = if (isChecked) {
+                                            selected + candidate.id
+                                        } else {
+                                            selected - candidate.id
+                                        }
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primary,
+                                        checkmarkColor = Color.White,
+                                    ),
+                                )
+                            }
                         }
                     }
+                    FfPrimaryButton(
+                        text = stringResource(R.string.event_invite_send),
+                        onClick = { viewModel.invite(selected.toList(), onInvited) },
+                        enabled = selected.isNotEmpty() && !ui.isSubmitting,
+                    )
                 }
             }
-            FfPrimaryButton(
-                text = if (busy) {
-                    stringResource(R.string.invite_sending)
-                } else {
-                    stringResource(R.string.invite_send)
-                },
-                onClick = {
-                    scope.launch {
-                        busy = true
-                        error = null
-                        try {
-                            api.createInvitations(eventId, selected.toList())
-                            onInvited()
-                        } catch (errorValue: ApiError) {
-                            error = errorValue.userMessage()
-                        } catch (errorValue: Exception) {
-                            error = errorValue.message
-                        } finally {
-                            busy = false
-                        }
-                    }
-                },
-                enabled = selected.isNotEmpty() && !busy,
-            )
         }
     }
 }

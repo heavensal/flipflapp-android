@@ -11,7 +11,7 @@ description: >-
 
 1. [docs/PROJECT.md](../../../docs/PROJECT.md) — in scope?
 2. [docs/DOMAIN.md](../../../docs/DOMAIN.md) — mobile domain rules
-3. [docs/API.md](../../../docs/API.md) and `../flipflapp-rails/swagger/v1/swagger.yaml` — HTTP contract
+3. [docs/mobile/README.md](../../../docs/mobile/README.md) — pick the matching bundle (`auth`, `users`, `events`, `notifications`, `device_tokens`, or `docs/api/v1`)
 4. Nearby code in the same feature — copy conventions
 5. If the Rails contract is missing — stop and propose the backend change first
 

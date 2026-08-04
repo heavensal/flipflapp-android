@@ -3,6 +3,7 @@ package fr.flipflapp.android.features.friendships
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import fr.flipflapp.android.app.AppBadgeStore
 import fr.flipflapp.android.app.SessionStore
 import fr.flipflapp.android.core.api.ApiClient
 import fr.flipflapp.android.core.api.ApiError
@@ -22,9 +23,13 @@ import kotlinx.coroutines.launch
 class FriendsViewModel(
     private val api: ApiClient,
     private val session: SessionStore,
+    private val badges: AppBadgeStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow<LoadState<FriendshipBuckets>>(LoadState.Loading)
     val state: StateFlow<LoadState<FriendshipBuckets>> = _state.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
@@ -39,19 +44,29 @@ class FriendsViewModel(
 
     init { refresh() }
 
-    fun refresh() {
+    fun refresh(fromUser: Boolean = false, silent: Boolean = false) {
         viewModelScope.launch {
-            _state.value = LoadState.Loading
+            val showContent = _state.value is LoadState.Content
+            when {
+                fromUser && showContent -> _isRefreshing.value = true
+                silent -> Unit
+                else -> _state.value = LoadState.Loading
+            }
             try {
                 val buckets = api.friendships()
-                val empty = buckets.accepted.isEmpty() && buckets.sent.isEmpty() &&
-                    buckets.received.isEmpty() && buckets.declined.isEmpty()
-                _state.value = if (empty) LoadState.Empty else LoadState.Content(buckets)
+                badges.setReceivedFriendRequests(buckets.received.size)
+                _state.value = LoadState.Content(buckets)
             } catch (error: ApiError) {
                 session.handleApiError(error)
-                _state.value = LoadState.Failed(error.userMessage())
+                if (_state.value !is LoadState.Content) {
+                    _state.value = LoadState.Failed(error.userMessage())
+                }
             } catch (error: Exception) {
-                _state.value = LoadState.Failed(error.message ?: "Chargement impossible.")
+                if (_state.value !is LoadState.Content) {
+                    _state.value = LoadState.Failed(error.message ?: "Chargement impossible.")
+                }
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
@@ -77,22 +92,22 @@ class FriendsViewModel(
 
     fun sendRequest(userId: UserId) = mutate {
         api.createFriendship(userId)
-        refresh()
+        refresh(silent = true)
     }
 
     fun accept(id: FriendshipId) = mutate {
         api.updateFriendship(id, Friendship.Status.Accepted)
-        refresh()
+        refresh(silent = true)
     }
 
     fun decline(id: FriendshipId) = mutate {
         api.updateFriendship(id, Friendship.Status.Declined)
-        refresh()
+        refresh(silent = true)
     }
 
     fun remove(id: FriendshipId) = mutate {
         api.deleteFriendship(id)
-        refresh()
+        refresh(silent = true)
     }
 
     private fun mutate(block: suspend () -> Unit) {
@@ -110,11 +125,15 @@ class FriendsViewModel(
     }
 
     companion object {
-        fun factory(api: ApiClient, session: SessionStore): ViewModelProvider.Factory =
+        fun factory(
+            api: ApiClient,
+            session: SessionStore,
+            badges: AppBadgeStore,
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    FriendsViewModel(api, session) as T
+                    FriendsViewModel(api, session, badges) as T
             }
     }
 }
